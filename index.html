@@ -341,8 +341,8 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
     </ul>
     <div class="grow"></div>
     <div class="shift">
-      <b>Line 2 · Shift B</b>
-      <span style="color:var(--muted)">14:00–22:00 · Tue 20 Oct</span>
+      <b id="shiftName">Line 2 · Shift B</b>
+      <span style="color:var(--muted)" id="shiftTime">14:00–22:00</span>
       <div class="bar" aria-hidden="true"><i id="shiftBar" style="width:62%"></i></div>
       <span style="color:var(--muted)"><span class="num" id="shiftPct">62</span>% of shift elapsed</span>
     </div>
@@ -353,6 +353,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
     <div class="topbar card">
       <label class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Search MSN, section, QN number…" aria-label="Search"><kbd>⌘K</kbd></label>
       <span class="live" id="liveState" data-on="true"><i></i><span id="liveText">Agents running</span></span>
+      <span class="live" id="awake" data-on="false" title="Keeps the display from sleeping while this page is open"><i></i><span>Checking screen…</span></span>
       <button class="btn sm" id="toggleSim" type="button" aria-pressed="false">Pause agents</button>
       <button class="btn primary" id="newAgent" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>New agent</button>
     </div>
@@ -439,7 +440,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
 
     <section class="orch" id="orch-card" aria-labelledby="orchTitle">
       <div class="orch-h">
-        <div><h2 id="orchTitle">Agent orchestration</h2><p>How the agents share the work on Shift B. Select an agent in the graph to focus every view on it.</p></div>
+        <div><h2 id="orchTitle">Agent orchestration</h2><p>How the agents share the work this shift. Select an agent in the graph to focus every view on it.</p></div>
         <div class="row-f"><span class="chip" id="focusChip" hidden>Focus:&nbsp;<b id="focusName"></b></span><button class="btn sm" id="clearFocus" type="button" hidden>Show all agents</button></div>
       </div>
       <div class="o-row1">
@@ -795,8 +796,8 @@ const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(s
 const between = r => r[0] + rnd() * (r[1] - r[0]);
 const pick = arr => arr[Math.floor(rnd() * arr.length)];
 const EV = [], CASES = [];
-let nowMin = 298, focusA = null, caseI = 0;
-const hhmm = m => { const t = 14 * 60 + Math.floor(m); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
+let nowMin = 298, focusA = null, caseI = 0, shiftStart = 14 * 60;
+const hhmm = m => { const t = (shiftStart + Math.floor(m)) % 1440; return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
 const strip = s => String(s).replace(/<[^>]+>/g, '');
 const agentOf = id => AGENTS.find(x => x.id === id) || AGENTS[0];
 const abbr = a => ({orch:'LO', qual:'QS', scrap:'SA', asm:'AT', rft:'RF', rca:'RC', rep:'SR'})[a.id] || a.nm.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -807,7 +808,7 @@ function addEv(kind, text, t = nowMin, extra = {}) {
   EV.push(e); return e;
 }
 function emit(kind, text, extra) {
-  nowMin = Math.min(479, nowMin + 0.8);
+  nowMin += 0.8; if (nowMin >= 480) rollShift();
   const e = addEv(kind, text, nowMin, extra); e.fresh = true;
   renderFeed(); renderAgents(); renderOrch(); flow(e);
   $('#shiftPct').textContent = Math.round(nowMin / 480 * 100); $('#shiftBar').style.width = (nowMin / 480 * 100).toFixed(1) + '%';
@@ -905,7 +906,7 @@ function renderLanes() {
   const dimE = e => focusA && focusA !== e.a && focusA !== e.from;
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Agent tasks per lane across Shift B, 14:00 to 22:00">`;
   s += `<rect x="${x(nowMin).toFixed(1)}" y="${Tp - 6}" width="${(x(480) - x(nowMin)).toFixed(1)}" height="${H - Tp + 6}" fill="var(--card-2)"/>`;
-  for (let h = 0; h <= 8; h++) s += `<line x1="${x(h * 60)}" x2="${x(h * 60)}" y1="${Tp - 6}" y2="${H}" stroke="var(--line)"/><text x="${x(h * 60)}" y="12" text-anchor="middle">${14 + h}:00</text>`;
+  for (let h = 0; h <= 8; h++) s += `<line x1="${x(h * 60)}" x2="${x(h * 60)}" y1="${Tp - 6}" y2="${H}" stroke="var(--line)"/><text x="${x(h * 60)}" y="12" text-anchor="middle">${hhmm(h * 60)}</text>`;
   lanes.forEach((a, i) => { const y = Tp + i * rh; s += `<text x="0" y="${y + 19}" class="lane-l" opacity="${focusA && focusA !== a.id ? .4 : 1}">${esc(a.nm)}</text><line x1="${L}" x2="${W - R}" y1="${y + rh}" y2="${y + rh}" stroke="var(--line)" stroke-dasharray="2 4"/>`; });
   EV.forEach(e => { if (e.from == null || idx[e.from] == null || idx[e.a] == null) return; const xx = x(e.t).toFixed(1); s += `<line x1="${xx}" x2="${xx}" y1="${Tp + idx[e.from] * rh + 15}" y2="${Tp + idx[e.a] * rh + 15}" stroke="${agentOf(e.a).c}" stroke-opacity="${dimE(e) ? .04 : .22}"/>`; });
   EV.forEach(e => { const i = idx[e.a]; if (i == null) return; s += `<rect x="${x(e.t).toFixed(1)}" y="${Tp + i * rh + 8}" width="${Math.max(3, x(e.t + e.dur) - x(e.t)).toFixed(1)}" height="14" rx="3" fill="${agentOf(e.a).c}" fill-opacity="${dimE(e) ? .15 : .9}"><title>${hhmm(e.t)} · ${esc(agentOf(e.a).nm)} ${esc(strip(e.text))}</title></rect>`; });
@@ -915,6 +916,7 @@ function renderLanes() {
 
 /* 3 · incident trace */
 function renderTrace() {
+  if (!CASES.length) { $('#caseSeg').innerHTML = ''; $('#trace').innerHTML = '<p class="foot-note">No cases yet this shift. The next quality notification will appear here.</p>'; return; }
   const list = CASES.slice(0, 4); if (caseI >= list.length) caseI = 0; const c = list[caseI];
   $('#caseSeg').innerHTML = list.map((x, i) => `<button type="button" data-i="${i}" aria-pressed="${i === caseI}">${x.id}</button>`).join('');
   const t0 = c.steps[0].t, tEnd = c.steps[c.steps.length - 1].t;
@@ -988,7 +990,7 @@ function renderLoad() {
   const x = m => L + m / 480 * (W - L - R), y = v => T + (1 - v / ymax) * (H - T - Bt);
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Average agents busy per 15 minutes, stacked by agent">`;
   [0, ymax / 2, ymax].forEach(v => s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`);
-  for (let h = 0; h <= 8; h += 2) s += `<text x="${x(h * 60)}" y="${H - 6}" text-anchor="middle">${14 + h}:00</text>`;
+  for (let h = 0; h <= 8; h += 2) s += `<text x="${x(h * 60)}" y="${H - 6}" text-anchor="middle">${hhmm(h * 60)}</text>`;
   let base = Array(nb).fill(0);
   ids.forEach((id, i) => {
     const top = base.map((b0, b) => b0 + busyM[i][b]);
@@ -1007,6 +1009,18 @@ function renderLoad() {
   const fmtS = v => v < 60 ? v + ' s' : (v / 60).toFixed(1) + ' min';
   const spec = EV.filter(e => e.out), escN = spec.filter(e => e.out === 'Escalated to shift lead').length;
   $('#loadStats').innerHTML = [[fmtS(q(.5)), 'Median time from event to first agent action'], [fmtS(q(.9)), '90th percentile response'], [Math.round((1 - escN / spec.length) * 100) + '%', 'Handled without a person'], [escN, 'Escalated to the shift lead']].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+}
+
+/* ---------- Shift rollover: the simulation never stops ---------- */
+const SHIFT_NAMES = {360:'A', 840:'B', 1320:'C'};
+const shiftName = () => SHIFT_NAMES[shiftStart] || '';
+function updateShiftLabels() { $('#shiftName').textContent = `Line 2 · Shift ${shiftName()}`; $('#shiftTime').textContent = `${hhmm(0)}–${hhmm(480)}`; }
+function rollShift() {
+  const prev = shiftName();
+  shiftStart = (shiftStart + 480) % 1440; nowMin = 0.8;
+  EV.length = 0; CASES.length = 0; caseI = 0; parts.length = 0;
+  updateShiftLabels();
+  addEv('rep', `closed the Shift ${prev} handover and opened Shift ${shiftName()}.`, 0.2);
 }
 
 function renderOrch() { renderGraph(); renderLanes(); renderTrace(); renderSankey(); renderFusAgents(); renderHeat(); renderLoad(); }
@@ -1160,7 +1174,24 @@ $('#agentForm').addEventListener('submit', e => {
 });
 
 /* ---------- Boot ---------- */
-renderKpis(); renderTrend(); renderDonut(); renderMsnSeg(); renderFus(); renderScrap(); renderRft(); renderAgents(); insight(); renderFeed(); renderOrch();
+renderKpis(); renderTrend(); renderDonut(); renderMsnSeg(); renderFus(); renderScrap(); renderRft(); renderAgents(); insight(); renderFeed(); renderOrch(); updateShiftLabels();
+
+/* ---------- Keep the screen awake (wall-display mode) ---------- */
+let wakeLock = null;
+function setAwake(on, txt) { const el = $('#awake'); el.dataset.on = on; el.querySelector('span').textContent = txt; }
+async function keepAwake() {
+  if (!('wakeLock' in navigator)) { setAwake(false, 'Screen may sleep (no wake lock in this browser)'); return; }
+  if (document.visibilityState !== 'visible' || (wakeLock && !wakeLock.released)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    setAwake(true, 'Screen stays on');
+    wakeLock.addEventListener('release', () => setAwake(false, 'Screen may sleep'));
+  } catch (err) { setAwake(false, 'Click the page to keep the screen on'); }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+document.addEventListener('click', keepAwake);
+setInterval(keepAwake, 60000);
+keepAwake();
 $('#shiftPct').textContent = Math.round(nowMin / 480 * 100); $('#shiftBar').style.width = (nowMin / 480 * 100).toFixed(1) + '%';
 start();
 })();
