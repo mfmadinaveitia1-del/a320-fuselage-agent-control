@@ -284,6 +284,23 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
 .fa-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12.5px; }
 @media (max-width: 1080px) { .o-row1, .load-grid { grid-template-columns: minmax(0,1fr); } }
 
+/* About */
+.about { padding: 0; }
+.about summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; }
+.about summary::-webkit-details-marker { display: none; }
+.about summary h2 { font-size: 15px; font-weight: 800; }
+.about summary .chev { color: var(--muted); font-size: 12px; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+.about summary .chev::after { content: "▾"; transition: transform .15s; }
+.about:not([open]) summary .chev::after { transform: rotate(-90deg); }
+.about-goal { margin: 0 18px; padding: 14px 16px; border-radius: 12px; background: var(--accent-soft); font-size: 14px; line-height: 1.55; max-width: 92ch; }
+.about-goal b { color: var(--accent); }
+.about-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; padding: 16px 18px 18px; }
+.about-grid h3 { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.about-grid p, .about-grid ul { margin: 0; font-size: 12.5px; color: var(--fg); }
+.about-grid ul { padding-left: 16px; display: grid; gap: 3px; }
+@media (max-width: 1080px) { .about-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 520px) { .about-grid { grid-template-columns: minmax(0,1fr); } }
+
 /* Dialog */
 .modal[hidden], .toast[hidden] { display: none; }
 .modal { position: fixed; inset: 0; background: rgba(13,17,32,.45); display: grid; place-items: center; padding: 16px; z-index: 50; }
@@ -371,6 +388,32 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
       </div>
       <div class="kpis" id="kpis"></div>
     </section>
+
+    <details class="about card" id="about" open>
+      <summary><h2>About this dashboard</h2><span class="chev" id="aboutToggle">Hide</span></summary>
+      <p class="about-goal"><b>Goal:</b> give the A320 fuselage line one place to see whether assembly is on track for quality, cost and delivery, and why it is not when it slips. The four KPIs that decide this are quality complaints, scrap, assembled regions against plan, and right first time. A team of AI agents watches them around the clock, spots deviations as they happen, finds likely causes and routes each issue to the right person, so the line reacts within minutes instead of at the next shift meeting.</p>
+      <div class="about-grid">
+        <div><h3>Who it is for</h3><p>Shift and line leads, quality engineers, production planners and the project team responsible for fuselage assembly.</p></div>
+        <div><h3>What the agents do</h3><ul>
+          <li>Read SAP QM, SAP MM, MES confirmations, inspection records and torque logs</li>
+          <li>Classify each quality notification and assign an owner</li>
+          <li>Keep the scrap Pareto and section status current</li>
+          <li>Compute right first time per station and shift</li>
+          <li>Open an 8D when a limit is crossed and escalate to the shift lead</li>
+          <li>Draft the shift handover</li></ul></div>
+        <div><h3>How to read it</h3><ul>
+          <li><b>Top:</b> the four KPIs against the previous 7 days and their targets</li>
+          <li><b>Middle:</b> where the problems sit: defect mix, fuselage sections, scrap drivers, stations</li>
+          <li><b>Bottom:</b> agent orchestration, showing how the agents share and hand over the work</li>
+          <li><b>Right:</b> ask the line assistant for causes, held sections or a handover</li></ul></div>
+        <div><h3>What it should achieve</h3><ul>
+          <li>Faster reaction to quality and scrap events</li>
+          <li>Fewer repeat defects through early root-cause work</li>
+          <li>Less manual KPI collection and reporting</li>
+          <li>One shared picture of the line across shifts</li></ul>
+          <p style="margin-top:8px;color:var(--muted)">Prototype with simulated sample data. No connection to production systems.</p></div>
+      </div>
+    </details>
 
     <div class="row2">
       <section class="sub card" id="rft-trend">
@@ -1175,6 +1218,13 @@ $('#agentForm').addEventListener('submit', e => {
 
 /* ---------- Boot ---------- */
 renderKpis(); renderTrend(); renderDonut(); renderMsnSeg(); renderFus(); renderScrap(); renderRft(); renderAgents(); insight(); renderFeed(); renderOrch(); updateShiftLabels();
+
+
+/* ---------- About panel: remember collapsed state per viewer ---------- */
+try { if (localStorage.getItem('aboutClosed') === '1') $('#about').open = false; } catch (e) {}
+const syncAbout = () => { $('#aboutToggle').textContent = $('#about').open ? 'Hide' : 'Show'; };
+$('#about').addEventListener('toggle', () => { syncAbout(); try { localStorage.setItem('aboutClosed', $('#about').open ? '0' : '1'); } catch (e) {} });
+syncAbout();
 
 /* ---------- Keep the screen awake (wall-display mode) ---------- */
 let wakeLock = null;
