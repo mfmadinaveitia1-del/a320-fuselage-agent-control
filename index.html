@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>A320 Fuselage Agent Control</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: SaaS control room — nav rail left, KPI tiles → trend + complaint mix → fuselage section map → scrap Pareto + station RFT → agent roster + live feed; AI assistant docked right. */
+:root {
+  --bg: #eef1f8;
+  --card: #ffffff;
+  --card-2: #f6f8fd;
+  --line: #e3e7f1;
+  --fg: #161b2e;
+  --muted: #69718a;
+  --faint: #a3aac0;
+  --accent: #4456e0;
+  --accent-soft: #e8ebfd;
+  --accent-fg: #ffffff;
+  --good: #1a9467;
+  --good-soft: #e3f5ed;
+  --warn: #c47d0e;
+  --warn-soft: #fbf0dc;
+  --bad: #d23f58;
+  --bad-soft: #fbe6ea;
+  --c1: #4456e0; --c2: #22a6a1; --c3: #8a63d2; --c4: #e0a325; --c5: #e0607a; --c6: #8b93a8;
+  --planned: #dfe3ee;
+  --shadow: 0 1px 2px rgba(22,27,46,.04), 0 6px 18px rgba(40,52,110,.06);
+  --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1120; --card: #151a2b; --card-2: #1b2136; --line: #262d45; --fg: #e6e9f4; --muted: #9098b2; --faint: #5b6380;
+  --accent: #7d8bff; --accent-soft: #232a52; --accent-fg: #0d1120;
+  --good: #3fcf96; --good-soft: #143429; --warn: #f0b44a; --warn-soft: #3a2d14; --bad: #ff7189; --bad-soft: #3d1a22;
+  --c1: #7d8bff; --c2: #3cc9c2; --c3: #ae8cf0; --c4: #f0b44a; --c5: #ff8aa0; --c6: #8b93a8;
+  --planned: #262d45; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0d1120; --card: #151a2b; --card-2: #1b2136; --line: #262d45; --fg: #e6e9f4; --muted: #9098b2; --faint: #5b6380;
+  --accent: #7d8bff; --accent-soft: #232a52; --accent-fg: #0d1120;
+  --good: #3fcf96; --good-soft: #143429; --warn: #f0b44a; --warn-soft: #3a2d14; --bad: #ff7189; --bad-soft: #3d1a22;
+  --c1: #7d8bff; --c2: #3cc9c2; --c3: #ae8cf0; --c4: #f0b44a; --c5: #ff8aa0; --c6: #8b93a8;
+  --planned: #262d45; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 500 13.5px/1.45 var(--font-body); -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+
+.app {
+  display: grid; grid-template-columns: 220px minmax(0,1fr) 320px; gap: 16px;
+  padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  max-width: 1680px; margin: 0 auto; align-items: start;
+}
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); min-width: 0; }
+
+/* Nav */
+.nav { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); padding: 18px 12px; display: flex; flex-direction: column; gap: 18px; min-height: calc(100vh - 32px); }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+.brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); display: grid; place-items: center; flex: none; }
+.brand-mark svg { width: 18px; height: 18px; }
+.brand b { font: 800 15px/1.1 var(--font-display); display: block; }
+.brand small { color: var(--muted); font-size: 11px; }
+.nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; color: var(--muted); text-decoration: none; font-weight: 600; }
+.nav a svg { width: 16px; height: 16px; flex: none; }
+.nav a:hover { background: var(--card-2); color: var(--fg); }
+.nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+.nav .grow { flex: 1; }
+.shift { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 6px; font-size: 12px; }
+.shift b { font-size: 12.5px; }
+.bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.user { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; border: 1px solid var(--line); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font: 700 12px var(--font-display); flex: none; }
+.user small { display: block; color: var(--muted); font-size: 11px; }
+
+/* Main */
+.main { display: grid; gap: 16px; min-width: 0; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 10px 12px; flex-wrap: wrap; }
+.search { flex: 1 1 220px; display: flex; align-items: center; gap: 8px; background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; color: var(--muted); min-width: 0; }
+.search input { border: 0; background: transparent; outline: none; flex: 1; min-width: 0; }
+.search kbd { font: 500 11px var(--font-mono); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+.btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 700; font-size: 12.5px; }
+.btn:hover { border-color: var(--faint); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.sm { padding: 5px 9px; font-size: 12px; border-radius: 8px; }
+.btn svg { width: 15px; height: 15px; }
+.live { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+.live[data-on="false"] i { background: var(--faint); box-shadow: none; }
+
+.panel { padding: 18px; display: grid; gap: 14px; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.head h1 { font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+.head p { margin: 4px 0 0; color: var(--muted); }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 600; background: var(--card); }
+.chip svg { width: 14px; height: 14px; color: var(--muted); }
+.sim-note { font-size: 11.5px; color: var(--muted); }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.kpi { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; background: var(--card); }
+.kpi-top { display: flex; align-items: center; gap: 9px; color: var(--muted); font-weight: 600; font-size: 12.5px; }
+.ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+.ico svg { width: 16px; height: 16px; }
+.kpi-val { display: flex; align-items: baseline; gap: 6px; }
+.kpi-val b { font: 600 26px/1 var(--font-mono); letter-spacing: -.02em; }
+.kpi-val span { color: var(--muted); font-size: 12px; }
+.kpi-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.delta { font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+.kpi-foot .target { display: block; }
+.delta small { display: block; color: var(--muted); font-weight: 500; font-size: 11px; }
+.up-good, .down-good { color: var(--good); }
+.up-bad, .down-bad { color: var(--bad); }
+.spark { width: 96px; height: 34px; flex: none; }
+.target { font-size: 11.5px; color: var(--muted); }
+.target b { color: var(--fg); }
+
+.row2 { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(0,1fr); gap: 16px; }
+.sub { padding: 16px; display: grid; gap: 12px; align-content: start; }
+.sub-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sub-h h2 { font-size: 14.5px; font-weight: 700; }
+.sub-h p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.seg { display: inline-flex; background: var(--card-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--fg); box-shadow: var(--shadow); }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { fill: var(--muted); font: 500 11px var(--font-mono); }
+
+.donut-wrap { display: grid; grid-template-columns: 150px minmax(0,1fr); gap: 16px; align-items: center; }
+.donut { position: relative; width: 150px; height: 150px; }
+.donut svg { width: 150px; height: 150px; transform: rotate(-90deg); }
+.donut .ctr { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.donut .ctr b { font: 600 24px/1 var(--font-mono); display: block; }
+.donut .ctr span { font-size: 11px; color: var(--muted); }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.legend li { display: grid; grid-template-columns: 10px minmax(0,1fr) auto auto; gap: 8px; align-items: center; font-size: 12.5px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; }
+.legend .n { font-family: var(--font-mono); font-weight: 600; }
+.legend .p { font-family: var(--font-mono); color: var(--muted); width: 38px; text-align: right; }
+
+/* Fuselage */
+.fus-grid { display: grid; grid-template-columns: minmax(0,1fr) 260px; gap: 16px; align-items: start; }
+.fus svg { width: 100%; height: auto; display: block; }
+.fus .seg-r { cursor: pointer; transition: opacity .15s; }
+.fus .seg-r:hover { opacity: .85; }
+.fus text { font: 600 11px var(--font-mono); fill: var(--muted); }
+.fus .lbl-on { fill: var(--fg); }
+.fus .outline { fill: none; stroke: var(--fg); stroke-opacity: .35; stroke-width: 1.5; }
+.fus .sel { fill: none; stroke: var(--accent); stroke-width: 3; }
+.st-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.st-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.st-legend i { width: 12px; height: 12px; border-radius: 3px; }
+.detail { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px; background: var(--card-2); }
+.detail h3 { font-size: 15px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12.5px; margin: 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; text-align: right; font-family: var(--font-mono); font-weight: 600; }
+.note { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 9px; }
+.msn-count { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.msn-count b { color: var(--fg); font-family: var(--font-mono); }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 99px; padding: 3px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.p-done { background: var(--good-soft); color: var(--good); }
+.p-inwork { background: var(--accent-soft); color: var(--accent); }
+.p-qn { background: var(--bad-soft); color: var(--bad); }
+.p-planned { background: var(--card-2); color: var(--muted); border: 1px solid var(--line); }
+.p-busy { background: var(--warn-soft); color: var(--warn); }
+.p-idle { background: var(--card-2); color: var(--muted); border: 1px solid var(--line); }
+.p-watch { background: var(--good-soft); color: var(--good); }
+
+/* Bars */
+.hbars { display: grid; gap: 10px; }
+.hb { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 2fr) 64px; gap: 10px; align-items: center; font-size: 12.5px; }
+.hb .nm { min-width: 0; }
+.hb .nm small { display: block; color: var(--muted); font-size: 11px; }
+.hb .track { position: relative; height: 10px; background: var(--card-2); border: 1px solid var(--line); border-radius: 99px; }
+.hb .fill { position: absolute; inset: -1px auto -1px -1px; border-radius: 99px; background: var(--c1); }
+.hb .mark { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--fg); opacity: .55; border-radius: 2px; }
+.hb .v { text-align: right; font-family: var(--font-mono); font-weight: 600; }
+.foot-note { font-size: 11.5px; color: var(--muted); }
+
+/* Agents */
+.agents { display: grid; gap: 0; }
+.ag { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 10px 2px; border-top: 1px solid var(--line); }
+.ag:first-child { border-top: 0; }
+.ag .ico { width: 34px; height: 34px; }
+.ag b { display: block; font-size: 13px; }
+.ag small { color: var(--muted); font-size: 12px; display: block; overflow-wrap: anywhere; }
+.ag .src { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); }
+.ag-r { display: grid; gap: 4px; justify-items: end; }
+.ag-r span.mono { font-size: 11px; color: var(--muted); }
+.feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; max-height: 420px; overflow: auto; }
+.feed li { display: grid; grid-template-columns: 8px minmax(0,1fr) auto; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--line); font-size: 12.5px; align-items: start; }
+.feed li:first-child { border-top: 0; }
+.feed li i { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; }
+.feed li b { font-weight: 700; }
+.feed li time { font: 500 11px var(--font-mono); color: var(--muted); white-space: nowrap; }
+.feed li.new { animation: flash 1.2s ease-out; }
+@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+
+/* Assistant */
+.assist { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); padding: 16px; display: grid; gap: 12px; max-height: calc(100vh - 32px); grid-template-rows: auto auto auto auto minmax(0,1fr) auto; }
+.assist-h { display: flex; align-items: center; gap: 9px; }
+.assist-h h2 { font-size: 14.5px; font-weight: 700; }
+.bubble { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; font-size: 12.5px; }
+.bubble.me { background: var(--accent-soft); border-color: transparent; justify-self: end; max-width: 88%; }
+.qa { display: grid; gap: 8px; }
+.qa button { display: grid; grid-template-columns: 30px minmax(0,1fr); gap: 10px; align-items: center; text-align: left; border: 1px solid var(--line); border-radius: 11px; background: var(--card); padding: 9px 10px; cursor: pointer; }
+.qa button:hover { border-color: var(--accent); }
+.qa b { display: block; font-size: 12.5px; }
+.qa small { color: var(--muted); font-size: 11.5px; }
+.insight { border-radius: 12px; padding: 12px; background: var(--good-soft); display: grid; gap: 6px; font-size: 12.5px; }
+.insight .t { display: flex; align-items: center; gap: 6px; font-weight: 800; color: var(--good); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.insight p { margin: 0; color: var(--fg); }
+.chat { overflow: auto; display: grid; gap: 8px; align-content: start; min-height: 80px; }
+.ask { display: flex; gap: 8px; border: 1px solid var(--line); border-radius: 11px; padding: 6px 6px 6px 11px; background: var(--card); }
+.ask input { flex: 1; border: 0; background: transparent; outline: none; min-width: 0; }
+.ask button { border: 0; background: var(--accent); color: var(--accent-fg); border-radius: 8px; width: 32px; height: 30px; display: grid; place-items: center; cursor: pointer; }
+.ask button svg { width: 15px; height: 15px; }
+
+[hidden] { display: none !important; }
+/* Orchestration */
+.orch { display: grid; gap: 16px; min-width: 0; scroll-margin-top: 16px; }
+.orch-h { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding: 10px 4px 0; }
+.orch-h h2 { font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
+.orch-h p { margin: 4px 0 0; color: var(--muted); }
+.row-f { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.o-row1 { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); gap: 16px; }
+.graph svg { width: 100%; height: auto; display: block; }
+.gnode { cursor: pointer; }
+.gnode:focus { outline: none; }
+.gnode:focus-visible circle.core { stroke: var(--fg); stroke-width: 4; }
+.gab { font: 800 12px var(--font-mono); }
+.gname { font: 700 11.5px var(--font-body); fill: var(--fg); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+.gsub { font: 500 10.5px var(--font-mono); fill: var(--muted); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+.gsrc { font: 600 11px var(--font-mono); fill: var(--muted); }
+.ecount { font: 600 10px var(--font-mono); fill: var(--muted); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+.halo { transform-box: fill-box; transform-origin: center; animation: halo 1.4s ease-out infinite; }
+@keyframes halo { from { transform: scale(1); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
+.scrollx { overflow-x: auto; }
+.scrollx svg { min-width: 720px; }
+.chart .lane-l { font: 700 11.5px var(--font-body); fill: var(--fg); }
+.chart .sk-l { font: 600 11.5px var(--font-body); fill: var(--fg); paint-order: stroke; stroke: var(--card); stroke-width: 4px; }
+.chart .sk-n { font-family: var(--font-mono); fill: var(--muted); }
+.chart .sk-h { font: 700 10.5px var(--font-body); fill: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.tr-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.tr-h small { display: block; color: var(--muted); font-size: 12px; }
+.tr { list-style: none; margin: 4px 0 0; padding: 0; display: grid; }
+.tr li { display: grid; grid-template-columns: 62px minmax(0,1fr); gap: 14px; position: relative; padding: 0 0 14px; font-size: 12.5px; }
+.tr li::before { content: ""; position: absolute; left: 70px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--faint)); box-sizing: border-box; }
+.tr li::after { content: ""; position: absolute; left: 74.5px; top: 17px; bottom: -2px; width: 1px; background: var(--line); }
+.tr li:last-child::after { display: none; }
+.tr li > div { padding-left: 14px; min-width: 0; }
+.tr time { font: 600 12px var(--font-mono); text-align: right; }
+.tr time small { display: block; color: var(--muted); font-weight: 500; font-size: 10.5px; }
+.tr li.pend::before { background: transparent; border: 1.5px dashed var(--faint); }
+.tr li.pend > div { color: var(--muted); font-style: italic; }
+.heat { display: grid; gap: 4px; }
+.hrow { display: grid; grid-template-columns: minmax(100px,1.4fr) repeat(4, minmax(0,1fr)) 40px; gap: 4px; align-items: center; font-size: 12px; }
+.hhead span { color: var(--muted); font-size: 11px; font-weight: 700; text-align: center; }
+.hname { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.hcell { border-radius: 6px; text-align: center; padding: 7px 0; font: 600 12px var(--font-mono); }
+.htot { text-align: right; color: var(--muted); font-weight: 600; }
+.load-grid { display: grid; grid-template-columns: minmax(0,1fr) 240px; gap: 16px; align-items: start; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--card-2); display: grid; gap: 2px; }
+.stat b { font: 600 18px var(--font-mono); }
+.stat span { color: var(--muted); font-size: 11.5px; }
+.lg { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11.5px; color: var(--muted); }
+.lg span { display: inline-flex; gap: 5px; align-items: center; }
+.lg i { width: 10px; height: 10px; border-radius: 3px; }
+.fa-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 12.5px; }
+@media (max-width: 1080px) { .o-row1, .load-grid { grid-template-columns: minmax(0,1fr); } }
+
+/* Dialog */
+.modal[hidden], .toast[hidden] { display: none; }
+.modal { position: fixed; inset: 0; background: rgba(13,17,32,.45); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.modal .card { width: min(420px, 100%); padding: 18px; display: grid; gap: 12px; }
+.field { display: grid; gap: 5px; font-size: 12.5px; font-weight: 600; }
+.field input, .field select { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; background: var(--card-2); }
+.toast { position: fixed; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 9px 14px; border-radius: 10px; font-weight: 600; font-size: 12.5px; z-index: 60; }
+
+/* Responsive */
+@media (max-width: 1320px) {
+  .app { grid-template-columns: 200px minmax(0,1fr); }
+  .assist { grid-column: 1 / -1; position: static; max-height: none; grid-template-columns: 1fr 1fr; grid-template-rows: none; }
+  .assist-h, .assist .bubble.greet { grid-column: 1 / -1; }
+  .chat { grid-column: 1 / -1; max-height: 300px; }
+  .ask { grid-column: 1 / -1; }
+}
+@media (max-width: 1080px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .row2, .fus-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0,1fr); }
+  .nav { position: static; min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px; gap: 10px; }
+  .nav ul { grid-auto-flow: column; overflow-x: auto; max-width: 100%; }
+  .nav .grow, .shift, .user { display: none; }
+  .assist { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 520px) {
+  .kpis { grid-template-columns: minmax(0,1fr); }
+  .donut-wrap { grid-template-columns: minmax(0,1fr); justify-items: center; }
+  .legend { width: 100%; }
+  .hb { grid-template-columns: minmax(0,1fr) 64px; }
+  .hb .track { grid-column: 1 / -1; grid-row: 2; }
+  .panel { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav class="nav card" aria-label="Main">
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3 13h13l4-3"/><path d="M8 13l3 5"/><path d="M8 13l3-7"/></svg></span>
+      <span><b>FuseLine</b><small>Agent control</small></span>
+    </div>
+    <ul>
+      <li><a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Dashboard</a></li>
+      <li><a href="#agents-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Agents</a></li>
+      <li><a href="#quality-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>Quality</a></li>
+      <li><a href="#scrap-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Scrap</a></li>
+      <li><a href="#fus-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="9" width="20" height="6" rx="3"/><path d="M8 9v6M13 9v6"/></svg>Assembly</a></li>
+      <li><a href="#rft-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg>Right first time</a></li>
+      <li><a href="#orch-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="5" r="2"/><circle cx="20" cy="5" r="2"/><circle cx="12" cy="21" r="2"/><path d="M6 6l4 4M18 6l-4 4M12 15v4"/></svg>Orchestration</a></li>
+    </ul>
+    <div class="grow"></div>
+    <div class="shift">
+      <b>Line 2 · Shift B</b>
+      <span style="color:var(--muted)">14:00–22:00 · Tue 20 Oct</span>
+      <div class="bar" aria-hidden="true"><i id="shiftBar" style="width:62%"></i></div>
+      <span style="color:var(--muted)"><span class="num" id="shiftPct">62</span>% of shift elapsed</span>
+    </div>
+    <div class="user"><span class="avatar">MF</span><span><b>Miguel F.</b><small>Project manager</small></span></div>
+  </nav>
+
+  <main class="main">
+    <div class="topbar card">
+      <label class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Search MSN, section, QN number…" aria-label="Search"><kbd>⌘K</kbd></label>
+      <span class="live" id="liveState" data-on="true"><i></i><span id="liveText">Agents running</span></span>
+      <button class="btn sm" id="toggleSim" type="button" aria-pressed="false">Pause agents</button>
+      <button class="btn primary" id="newAgent" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>New agent</button>
+    </div>
+
+    <section class="panel card">
+      <div class="head">
+        <div>
+          <h1>Fuselage assembly · A320 family</h1>
+          <p>Seven agents watching quality, scrap, section progress and right-first-time on Line 2.</p>
+        </div>
+        <div style="display:grid;gap:6px;justify-items:end">
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>CW 42–43 · 14–20 Oct 2026</span>
+          <span class="sim-note">Simulated sample data</span>
+        </div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <div class="row2">
+      <section class="sub card" id="rft-trend">
+        <div class="sub-h">
+          <div><h2>KPI trend</h2><p id="trendSub">Daily, last 7 days, against target</p></div>
+          <div class="seg" role="group" aria-label="Choose KPI" id="trendSeg">
+            <button type="button" data-k="rft" aria-pressed="true">RFT</button>
+            <button type="button" data-k="regions" aria-pressed="false">Regions</button>
+            <button type="button" data-k="qn" aria-pressed="false">Complaints</button>
+            <button type="button" data-k="scrap" aria-pressed="false">Scrap</button>
+          </div>
+        </div>
+        <div class="chart" id="trendChart"></div>
+      </section>
+      <section class="sub card" id="quality-card">
+        <div class="sub-h"><div><h2>Quality complaints by defect</h2><p>Quality notifications raised, last 7 days</p></div></div>
+        <div class="donut-wrap">
+          <div class="donut"><svg viewBox="0 0 42 42" id="donut" aria-hidden="true"></svg><div class="ctr"><div><b id="donutTotal">0</b><span>QNs</span></div></div></div>
+          <ul class="legend" id="qnLegend"></ul>
+        </div>
+      </section>
+    </div>
+
+    <section class="sub card" id="fus-card">
+      <div class="sub-h">
+        <div><h2>Assembled regions</h2><p>Section status per aircraft in the line. Select a section for detail.</p></div>
+        <div class="seg" role="group" aria-label="Choose aircraft" id="msnSeg"></div>
+      </div>
+      <div class="fus-grid">
+        <div style="display:grid;gap:12px;min-width:0">
+          <div class="fus" id="fus"></div>
+          <div class="st-legend">
+            <span><i style="background:var(--good)"></i>Assembled</span>
+            <span><i style="background:var(--accent)"></i>In work</span>
+            <span><i style="background:var(--bad)"></i>Held by open QN</span>
+            <span><i style="background:var(--planned);border:1px solid var(--line)"></i>Planned</span>
+          </div>
+          <div class="msn-count" id="msnCount"></div>
+        </div>
+        <div class="detail" id="detail" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <div class="row2">
+      <section class="sub card" id="scrap-card">
+        <div class="sub-h"><div><h2>Scrap Pareto</h2><p>Scrap value by part family, last 7 days</p></div><span class="chip num" id="scrapTotalChip">€0</span></div>
+        <div class="hbars" id="scrapBars"></div>
+        <div class="foot-note" id="scrapNote"></div>
+      </section>
+      <section class="sub card" id="rft-card">
+        <div class="sub-h"><div><h2>Right first time by station</h2><p>First-pass inspection acceptance, target 95%</p></div></div>
+        <div class="hbars" id="rftBars"></div>
+        <div class="foot-note">Vertical mark = 95% target.</div>
+      </section>
+    </div>
+
+    <div class="row2">
+      <section class="sub card" id="agents-card">
+        <div class="sub-h"><div><h2>Agent roster</h2><p>Orchestrator plus specialists, with the system each one reads</p></div><span class="chip"><span class="num" id="busyCount">0</span>&nbsp;busy</span></div>
+        <div class="agents" id="agents"></div>
+      </section>
+      <section class="sub card">
+        <div class="sub-h"><div><h2>Live agent activity</h2><p>Hand-offs and findings as they happen</p></div><span class="chip num" id="evCount">0 events</span></div>
+        <ul class="feed" id="feed"></ul>
+      </section>
+    </div>
+
+    <section class="orch" id="orch-card" aria-labelledby="orchTitle">
+      <div class="orch-h">
+        <div><h2 id="orchTitle">Agent orchestration</h2><p>How the agents share the work on Shift B. Select an agent in the graph to focus every view on it.</p></div>
+        <div class="row-f"><span class="chip" id="focusChip" hidden>Focus:&nbsp;<b id="focusName"></b></span><button class="btn sm" id="clearFocus" type="button" hidden>Show all agents</button></div>
+      </div>
+      <div class="o-row1">
+        <section class="sub card">
+          <div class="sub-h"><div><h2>Orchestration graph</h2><p>Data sources → specialists → orchestrator. Line width = events this shift, moving dots = live hand-offs.</p></div></div>
+          <div class="graph"><svg viewBox="0 0 680 420" role="img" aria-label="Graph of the Line Orchestrator, six specialist agents and their data sources"><g id="gStatic"></g><g id="gPart" pointer-events="none"></g></svg></div>
+        </section>
+        <section class="sub card">
+          <div class="sub-h"><div><h2>Incident trace</h2><p>One case from detection to resolution</p></div><div class="seg" id="caseSeg" role="group" aria-label="Choose case"></div></div>
+          <div id="trace" aria-live="polite"></div>
+        </section>
+      </div>
+      <section class="sub card">
+        <div class="sub-h"><div><h2>Shift timeline</h2><p>Each bar is one agent task. Thin vertical lines are hand-offs between lanes. The shaded part is the rest of the shift.</p></div></div>
+        <div class="scrollx chart" id="lanes"></div>
+      </section>
+      <section class="sub card">
+        <div class="sub-h"><div><h2>Where the work flows</h2><p>Events this shift, from data source to agent to outcome</p></div></div>
+        <div class="scrollx chart" id="sankey"></div>
+      </section>
+      <div class="row2">
+        <section class="sub card">
+          <div class="sub-h"><div><h2>Agents on the fuselage</h2><p id="fusAgMsn"></p></div><span class="foot-note">Aircraft follows the selector in Assembled regions</span></div>
+          <div class="fus" id="fusAg"></div>
+          <ul class="fa-list" id="fusAgList"></ul>
+        </section>
+        <section class="sub card">
+          <div class="sub-h"><div><h2>Agent × KPI</h2><p>Actions per agent and KPI this shift</p></div></div>
+          <div id="heat"></div>
+        </section>
+      </div>
+      <section class="sub card">
+        <div class="sub-h"><div><h2>Load and response time</h2><p>Average agents busy per 15 minutes, stacked by agent, with events received below</p></div></div>
+        <div class="load-grid"><div class="chart" id="load"></div><div class="stats" id="loadStats"></div></div>
+      </section>
+    </section>
+  </main>
+
+  <aside class="assist card" aria-label="AI assistant">
+    <div class="assist-h">
+      <span class="ico" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></svg></span>
+      <h2>Line assistant</h2>
+    </div>
+    <div class="bubble greet">Hi Miguel. I coordinate the line agents. Ask about complaints, scrap, a section or RFT, or pick an action below.</div>
+    <div class="qa">
+      <button type="button" data-ask="Why is RFT below target?"><span class="ico" style="background:var(--accent-soft);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></span><span><b>Explain the RFT gap</b><small>Station-level root cause</small></span></button>
+      <button type="button" data-ask="What drives scrap this week?"><span class="ico" style="background:var(--warn-soft);color:var(--warn)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M6 7l1 13h10l1-13"/></svg></span><span><b>Scrap drivers</b><small>Pareto and next action</small></span></button>
+      <button type="button" data-ask="Which sections are held by QNs?"><span class="ico" style="background:var(--bad-soft);color:var(--bad)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></span><span><b>Held sections</b><small>Open QNs blocking flow</small></span></button>
+      <button type="button" data-ask="Write the shift handover"><span class="ico" style="background:var(--good-soft);color:var(--good)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg></span><span><b>Shift handover</b><small>Summary for Shift C</small></span></button>
+    </div>
+    <div class="insight">
+      <span class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/></svg>Insight</span>
+      <p id="insightText"></p>
+    </div>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <form class="ask" id="askForm">
+      <input id="askInput" placeholder="Ask the line agents…" aria-label="Ask the assistant" autocomplete="off">
+      <button type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </form>
+  </aside>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <form class="card" id="agentForm">
+    <h2 style="font-size:16px">New agent</h2>
+    <label class="field">Name<input id="agName" required placeholder="e.g. Sealant Cure Watcher"></label>
+    <label class="field">KPI to watch
+      <select id="agKpi"><option value="qn">Quality complaints</option><option value="scrap">Scrap</option><option value="regions">Assembled regions</option><option value="rft">Right first time</option></select>
+    </label>
+    <label class="field">Data source<input id="agSrc" placeholder="e.g. MES station confirmations"></label>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" type="button" id="cancelAgent">Cancel</button>
+      <button class="btn primary" type="submit">Add to roster</button>
+    </div>
+  </form>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const days = ['Wed 14','Thu 15','Fri 16','Sat 17','Sun 18','Mon 19','Tue 20'];
+
+/* ---------- Sample data (simulated) ---------- */
+const D = {
+  qnDaily: [7,6,5,6,4,5,5], qnPrev: 45, qnOpen: 12,
+  scrapDaily: [3.1,2.4,2.9,2.2,2.6,2.8,2.4], scrapPrev: 21.9,
+  regDaily: [20,21,19,22,20,21,19], regPrev: 137, regPlan: 150,
+  rftDaily: [89.6,90.2,91.0,91.8,92.1,91.5,93.4], rftPrev: 89.6, rftTarget: 95,
+  qnCats: [
+    {k:'Fastener installation', n:11, c:'var(--c1)'},
+    {k:'Sealant application', n:8, c:'var(--c2)'},
+    {k:'Gap & flush', n:7, c:'var(--c3)'},
+    {k:'Drilling / hole quality', n:6, c:'var(--c4)'},
+    {k:'FOD', n:4, c:'var(--c5)'},
+    {k:'Documentation', n:2, c:'var(--c6)'}
+  ],
+  scrap: [
+    {k:'Skin panel', d:'S16 dent, beyond repair limit', v:6.2},
+    {k:'Frame clips', d:'FR47 mis-drilled', v:3.8},
+    {k:'Stringer splice', d:'S13/S14 edge distance', v:3.1},
+    {k:'Floor beam', d:'Wrong hole pattern', v:2.9},
+    {k:'Fasteners & collars', d:'Hi-Lok, torque rejects', v:2.4}
+  ],
+  stations: [
+    {k:'Stn 10', d:'Panel assembly', v:94.2},
+    {k:'Stn 20', d:'Orbital section join', v:88.1},
+    {k:'Stn 30', d:'Floor grid', v:92.6},
+    {k:'Stn 40', d:'System brackets', v:90.3},
+    {k:'Stn 50', d:'Sealing & final inspection', v:91.9}
+  ]
+};
+const SECTIONS = [
+  {id:'S11', nm:'Nose / cockpit', x0:30, x1:130, stn:'Stn 10'},
+  {id:'S12', nm:'Forward fuselage', x0:130, x1:225, stn:'Stn 10'},
+  {id:'S13', nm:'Forward cabin', x0:225, x1:320, stn:'Stn 20'},
+  {id:'S14', nm:'Forward-centre', x0:320, x1:410, stn:'Stn 20'},
+  {id:'S14A', nm:'Centre plug', x0:410, x1:460, stn:'Stn 20'},
+  {id:'S15', nm:'Centre / wing box', x0:460, x1:560, stn:'Stn 30'},
+  {id:'S16', nm:'Aft-centre', x0:560, x1:660, stn:'Stn 30'},
+  {id:'S17', nm:'Aft cabin', x0:660, x1:755, stn:'Stn 40'},
+  {id:'S18', nm:'Rear fuselage', x0:755, x1:850, stn:'Stn 40'},
+  {id:'S19', nm:'Tail cone', x0:850, x1:932, stn:'Stn 50'}
+];
+const mk = (st, qn = {}, prog = {}) => SECTIONS.map((s, i) => ({
+  st: st[i], qn: qn[s.id] || 0,
+  prog: st[i] === 'done' ? 100 : st[i] === 'planned' ? 0 : (prog[s.id] ?? 55)
+}));
+const MSNS = [
+  {id:'11842', type:'A320neo', reg: mk(['done','done','done','done','done','done','done','done','done','inwork'], {S19:1}, {S19:80})},
+  {id:'11847', type:'A320neo', reg: mk(['done','done','done','done','done','qn','inwork','planned','planned','planned'], {S15:3, S16:2}, {S15:70, S16:35})},
+  {id:'11851', type:'A321neo', reg: mk(['inwork','inwork','planned','planned','planned','planned','planned','planned','planned','planned'], {}, {S11:60, S12:20})}
+];
+const AGENTS = [
+  {id:'orch', nm:'Line Orchestrator', role:'Routes events, sequences the other agents, escalates to the shift lead', src:'event bus', c:'var(--accent)', st:'watch', ic:'hub'},
+  {id:'qual', nm:'Quality Sentinel', role:'Classifies new quality notifications and assigns owners', src:'SAP QM · QN', c:'var(--c5)', st:'idle', ic:'shield'},
+  {id:'scrap', nm:'Scrap Analyst', role:'Tracks scrap postings and keeps the Pareto current', src:'SAP MM · mvt 551', c:'var(--c4)', st:'idle', ic:'bin'},
+  {id:'asm', nm:'Assembly Tracker', role:'Maps station confirmations to fuselage sections', src:'MES confirmations', c:'var(--c2)', st:'idle', ic:'plane'},
+  {id:'rft', nm:'RFT Monitor', role:'Computes first-pass acceptance per station and shift', src:'Inspection records', c:'var(--good)', st:'idle', ic:'check'},
+  {id:'rca', nm:'Root Cause Agent', role:'Opens 8D / Ishikawa when a KPI crosses its limit', src:'QN + torque logs', c:'var(--c3)', st:'idle', ic:'search'},
+  {id:'rep', nm:'Shift Reporter', role:'Drafts the shift handover from all agent findings', src:'all agents', c:'var(--c6)', st:'idle', ic:'doc'}
+];
+const ICONS = {
+  hub:'<circle cx="12" cy="12" r="3"/><circle cx="4" cy="5" r="2"/><circle cx="20" cy="5" r="2"/><circle cx="4" cy="19" r="2"/><circle cx="20" cy="19" r="2"/><path d="M6 6l4 4M18 6l-4 4M6 18l4-4M18 18l-4-4"/>',
+  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  bin:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  plane:'<rect x="2" y="9" width="20" height="6" rx="3"/><path d="M8 9v6M13 9v6"/>',
+  check:'<path d="M4 12l5 5L20 6"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  doc:'<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/>',
+  bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'
+};
+const svgIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]||ICONS.bolt}</svg>`;
+
+const sum = a => a.reduce((x, y) => x + y, 0);
+const avg = a => sum(a) / a.length;
+const f1 = n => n.toFixed(1);
+const eur = k => '€' + (k).toFixed(1) + 'k';
+
+/* ---------- KPI tiles ---------- */
+function spark(vals, color) {
+  const w = 96, h = 34, p = 3, mn = Math.min(...vals), mx = Math.max(...vals), r = (mx - mn) || 1;
+  const pts = vals.map((v, i) => [p + i * (w - 2*p) / (vals.length - 1), h - p - (v - mn) / r * (h - 2*p)]);
+  const line = pts.map(q => q.map(n => n.toFixed(1)).join(',')).join(' ');
+  const last = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polygon points="${p},${h} ${line} ${w-p},${h}" fill="${color}" fill-opacity=".12"/><polyline points="${line}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${last[0]}" cy="${last[1]}" r="2.6" fill="${color}"/></svg>`;
+}
+function renderKpis() {
+  const qn = sum(D.qnDaily), sc = sum(D.scrapDaily), rg = sum(D.regDaily), rft = avg(D.rftDaily);
+  const pct = (a, b) => (a - b) / b * 100;
+  const tiles = [
+    {nm:'Quality complaints', ic:'shield', c:'var(--c5)', bg:'var(--bad-soft)', val: qn, unit:'QNs', d: pct(qn, D.qnPrev), lowerBetter:true, fmt: v => v.toFixed(1)+'%', foot:`<b class="num">${D.qnOpen}</b> still open`, data:D.qnDaily},
+    {nm:'Scrap', ic:'bin', c:'var(--c4)', bg:'var(--warn-soft)', val: '€'+sc.toFixed(1)+'k', unit:'', d: pct(sc, D.scrapPrev), lowerBetter:true, fmt: v => v.toFixed(1)+'%', foot:`<b class="num">0.82%</b> of material value`, data:D.scrapDaily},
+    {nm:'Assembled regions', ic:'plane', c:'var(--c2)', bg:'var(--accent-soft)', val: rg, unit:`/ ${D.regPlan} plan`, d: pct(rg, D.regPrev), lowerBetter:false, fmt: v => v.toFixed(1)+'%', foot:`<b class="num">${(rg/D.regPlan*100).toFixed(1)}%</b> schedule adherence`, data:D.regDaily},
+    {nm:'Right first time', ic:'check', c:'var(--good)', bg:'var(--good-soft)', val: f1(rft)+'%', unit:'', d: rft - D.rftPrev, lowerBetter:false, fmt: v => v.toFixed(1)+' pts', foot:`target <b class="num">${D.rftTarget}%</b> · gap <b class="num">${f1(D.rftTarget - rft)}</b> pts`, data:D.rftDaily}
+  ];
+  $('#kpis').innerHTML = tiles.map(t => {
+    const up = t.d >= 0, good = t.lowerBetter ? !up : up;
+    const cls = (up ? 'up-' : 'down-') + (good ? 'good' : 'bad');
+    return `<article class="kpi">
+      <div class="kpi-top"><span class="ico" style="background:${t.bg};color:${t.c}">${svgIcon(t.ic)}</span>${t.nm}</div>
+      <div class="kpi-val"><b>${t.val}</b><span>${t.unit}</span></div>
+      <div class="kpi-foot"><div><span class="delta ${cls}">${up ? '↑' : '↓'} ${t.fmt(Math.abs(t.d))}</span><small class="target">vs previous 7 days</small></div>${spark(t.data, t.c)}</div>
+      <div class="target">${t.foot}</div>
+    </article>`;
+  }).join('');
+}
+
+/* ---------- Trend chart ---------- */
+let trendK = 'rft';
+const TREND = {
+  rft: {vals:() => D.rftDaily, type:'line', target:95, unit:'%', min:85, max:97, sub:'Daily RFT %, target 95%', c:'var(--good)', fmt:v=>v.toFixed(1)},
+  regions: {vals:() => D.regDaily, type:'bar', target:D.regPlan/7, unit:'', min:0, max:25, sub:'Regions assembled per day, plan 21.4/day', c:'var(--c2)', fmt:v=>v},
+  qn: {vals:() => D.qnDaily, type:'bar', target:5, unit:'', min:0, max:10, sub:'Quality notifications raised per day, limit 5/day', c:'var(--c5)', fmt:v=>v},
+  scrap: {vals:() => D.scrapDaily, type:'bar', target:2.5, unit:'k', min:0, max:4, sub:'Scrap value per day in €k, limit €2.5k/day', c:'var(--c4)', fmt:v=>v.toFixed(1)}
+};
+function renderTrend() {
+  const T = TREND[trendK], vals = T.vals();
+  const W = 640, H = 230, L = 40, R = 14, Tp = 14, B = 28;
+  const x = i => L + (i + .5) * (W - L - R) / vals.length;
+  const y = v => Tp + (1 - (v - T.min) / (T.max - T.min)) * (H - Tp - B);
+  const ticks = []; const steps = 4;
+  for (let i = 0; i <= steps; i++) ticks.push(T.min + i * (T.max - T.min) / steps);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(T.sub)}">`;
+  ticks.forEach(t => { s += `<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)"/><text x="${L-8}" y="${y(t)+4}" text-anchor="end">${Number.isInteger(t)?t:t.toFixed(1)}</text>`; });
+  days.forEach((d, i) => { s += `<text x="${x(i)}" y="${H-8}" text-anchor="middle">${d}</text>`; });
+  const bw = (W - L - R) / vals.length * .5;
+  if (T.type === 'bar') {
+    vals.forEach((v, i) => {
+      const over = (trendK === 'regions') ? v < T.target : v > T.target;
+      s += `<rect x="${x(i)-bw/2}" y="${y(v)}" width="${bw}" height="${y(T.min)-y(v)}" rx="4" fill="${T.c}" fill-opacity="${over ? 1 : .55}"><title>${days[i]}: ${T.fmt(v)}${T.unit}</title></rect>`;
+      s += `<text x="${x(i)}" y="${y(v)-6}" text-anchor="middle" style="fill:var(--fg)">${T.fmt(v)}</text>`;
+    });
+  } else {
+    const pts = vals.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+    s += `<polygon points="${x(0)},${y(T.min)} ${pts} ${x(vals.length-1)},${y(T.min)}" fill="${T.c}" fill-opacity=".10"/>`;
+    s += `<polyline points="${pts}" fill="none" stroke="${T.c}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    vals.forEach((v, i) => { const last = i === vals.length - 1; s += `<circle cx="${x(i)}" cy="${y(v)}" r="${last?5:3.5}" fill="${last ? T.c : 'var(--card)'}" stroke="${T.c}" stroke-width="2"><title>${days[i]}: ${T.fmt(v)}%</title></circle>`; if (last || i === 0) s += `<text x="${x(i)}" y="${y(v)-10}" text-anchor="middle" style="fill:var(--fg)">${T.fmt(v)}%</text>`; });
+  }
+  const ty = y(T.target);
+  s += `<line x1="${L}" x2="${W-R}" y1="${ty}" y2="${ty}" stroke="var(--bad)" stroke-dasharray="5 4" stroke-width="1.4"/>`;
+  s += `<text x="${W-R}" y="${ty-6}" text-anchor="end" style="fill:var(--bad)">${trendK==='regions'?'plan':trendK==='rft'?'target':'limit'} ${T.fmt(trendK==='regions'?Math.round(T.target*10)/10:T.target)}${T.unit}</text>`;
+  s += `</svg>`;
+  $('#trendChart').innerHTML = s;
+  $('#trendSub').textContent = T.sub;
+}
+$('#trendSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  trendK = b.dataset.k;
+  $('#trendSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  renderTrend();
+});
+
+/* ---------- Donut ---------- */
+function renderDonut() {
+  const tot = sum(D.qnCats.map(c => c.n)); let off = 0; const C = 2 * Math.PI * 15.9155;
+  let s = `<circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--line)" stroke-width="6"/>`;
+  D.qnCats.forEach(c => {
+    const len = c.n / tot * 100;
+    s += `<circle cx="21" cy="21" r="15.9155" fill="none" stroke="${c.c}" stroke-width="6" stroke-dasharray="${Math.max(len - .8, .1)} ${100 - Math.max(len - .8, .1)}" stroke-dashoffset="${-off}"/>`;
+    off += len;
+  });
+  $('#donut').innerHTML = s;
+  $('#donutTotal').textContent = tot;
+  $('#qnLegend').innerHTML = D.qnCats.map(c => `<li><i style="background:${c.c}"></i><span>${c.k}</span><span class="n">${c.n}</span><span class="p">${Math.round(c.n/tot*100)}%</span></li>`).join('');
+}
+
+/* ---------- Fuselage ---------- */
+let msnI = 1, selSec = 'S15';
+const FUS_PATH = 'M30 100 C30 70 68 52 130 52 L690 52 C780 52 860 66 932 86 L932 106 C860 118 780 148 690 148 L130 148 C68 148 30 130 30 100 Z';
+const stColor = { done:'var(--good)', inwork:'var(--accent)', qn:'var(--bad)', planned:'var(--planned)' };
+const stLabel = { done:'Assembled', inwork:'In work', qn:'Held by QN', planned:'Planned' };
+function renderMsnSeg() {
+  $('#msnSeg').innerHTML = MSNS.map((m, i) => `<button type="button" data-i="${i}" aria-pressed="${i===msnI}">MSN ${m.id}</button>`).join('');
+}
+$('#msnSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  msnI = +b.dataset.i; renderMsnSeg(); renderFus();
+});
+function renderFus() {
+  const m = MSNS[msnI];
+  let s = `<svg viewBox="0 0 960 200" role="img" aria-label="A320 fuselage sections for MSN ${m.id}"><defs><clipPath id="fc"><path d="${FUS_PATH}"/></clipPath></defs>`;
+  // wing hint
+  s += `<path d="M470 120 L600 196 L640 196 L560 120 Z" fill="var(--faint)" fill-opacity=".18"/>`;
+  s += `<g clip-path="url(#fc)">`;
+  SECTIONS.forEach((sec, i) => {
+    const r = m.reg[i];
+    s += `<rect class="seg-r" data-s="${sec.id}" x="${sec.x0}" y="40" width="${sec.x1 - sec.x0}" height="120" fill="${stColor[r.st]}" fill-opacity="${r.st==='planned'?1:r.st==='inwork'? .35 + r.prog/200 : .85}" tabindex="0" role="button" aria-label="${sec.id} ${sec.nm}: ${stLabel[r.st]}"><title>${sec.id} · ${sec.nm} · ${stLabel[r.st]}</title></rect>`;
+    if (r.st === 'inwork' || r.st === 'qn') s += `<rect x="${sec.x0}" y="146" width="${(sec.x1-sec.x0)*r.prog/100}" height="4" fill="var(--fg)" fill-opacity=".45" pointer-events="none"/>`;
+    s += `<line x1="${sec.x1}" x2="${sec.x1}" y1="40" y2="160" stroke="var(--card)" stroke-width="2" pointer-events="none"/>`;
+  });
+  // windows
+  for (let wx = 240; wx < 760; wx += 22) s += `<rect x="${wx}" y="78" width="9" height="12" rx="3" fill="var(--card)" fill-opacity=".55" pointer-events="none"/>`;
+  s += `<path d="M58 84 L92 70 L112 70 L112 86 Z" fill="var(--card)" fill-opacity=".6" pointer-events="none"/>`;
+  s += `</g><path class="outline" d="${FUS_PATH}"/>`;
+  const sel = SECTIONS.find(x => x.id === selSec);
+  s += `<rect class="sel" x="${sel.x0+1.5}" y="${sel.id==='S19'?84:sel.id==='S11'?60:50}" width="${sel.x1-sel.x0-3}" height="${sel.id==='S19'?24:sel.id==='S11'?80:100}" rx="4" pointer-events="none"/>`;
+  SECTIONS.forEach((sec) => { s += `<text x="${(sec.x0+sec.x1)/2}" y="30" text-anchor="middle" class="${sec.id===selSec?'lbl-on':''}">${sec.id}</text>`; });
+  s += `</svg>`;
+  $('#fus').innerHTML = s;
+  const cnt = {done:0,inwork:0,qn:0,planned:0}; m.reg.forEach(r => cnt[r.st]++);
+  $('#msnCount').innerHTML = `<span>${m.type} · MSN ${m.id}</span><span><b>${cnt.done}</b>/10 assembled</span><span><b>${cnt.inwork}</b> in work</span><span><b>${cnt.qn}</b> held</span><span><b>${cnt.planned}</b> planned</span>`;
+  renderDetail();
+  if (typeof EV !== 'undefined') renderFusAgents();
+}
+$('#fus').addEventListener('click', e => { const r = e.target.closest('[data-s]'); if (r) { selSec = r.dataset.s; renderFus(); } });
+$('#fus').addEventListener('keydown', e => { const r = e.target.closest('[data-s]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selSec = r.dataset.s; renderFus(); $(`#fus [data-s="${selSec}"]`)?.focus(); } });
+function sectionNote(m, sec, r) {
+  if (r.st === 'qn') return `Root Cause Agent links the open QNs to Hi-Lok collar torque on the ${sec.id} orbital join. Rework order raised, section release expected next shift.`;
+  if (r.st === 'inwork') return `Assembly Tracker: last MES confirmation at ${sec.stn}. ${r.qn ? r.qn + ' QN under review, not blocking.' : 'No open findings.'}`;
+  if (r.st === 'done') return `Released by RFT Monitor after first-pass inspection${r.qn ? ', with ' + r.qn + ' minor QN in follow-up' : ''}.`;
+  return `Waiting for upstream section. Kits staged for ${sec.stn}.`;
+}
+function renderDetail() {
+  const m = MSNS[msnI], i = SECTIONS.findIndex(x => x.id === selSec), sec = SECTIONS[i], r = m.reg[i];
+  $('#detail').innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><h3>${sec.id} · ${sec.nm}</h3><span class="pill p-${r.st}">${stLabel[r.st]}</span></div>
+    <dl class="kv">
+      <dt>Aircraft</dt><dd>MSN ${m.id}</dd>
+      <dt>Station</dt><dd>${sec.stn}</dd>
+      <dt>Progress</dt><dd>${r.prog}%</dd>
+      <dt>Open QNs</dt><dd style="color:${r.qn ? 'var(--bad)' : 'inherit'}">${r.qn}</dd>
+      <dt>Station RFT</dt><dd>${D.stations.find(s => s.k === sec.stn).v.toFixed(1)}%</dd>
+    </dl>
+    <div class="bar" aria-hidden="true"><i style="width:${r.prog}%;background:${r.st==='qn'?'var(--bad)':r.st==='done'?'var(--good)':'var(--accent)'}"></i></div>
+    <div class="note">${sectionNote(m, sec, r)}</div>`;
+}
+
+/* ---------- Bars ---------- */
+function renderScrap() {
+  const items = [...D.scrap].sort((a, b) => b.v - a.v), tot = sum(items.map(x => x.v)), mx = items[0].v;
+  let cum = 0;
+  $('#scrapBars').innerHTML = items.map(it => { cum += it.v; return `<div class="hb"><div class="nm">${it.k}<small>${it.d}</small></div><div class="track"><div class="fill" style="width:${it.v/mx*100}%;background:var(--c4)"></div></div><div class="v">${eur(it.v)}</div></div>`; }).join('');
+  $('#scrapTotalChip').textContent = 'Total ' + eur(tot);
+  const top2 = (items[0].v + items[1].v) / tot * 100;
+  $('#scrapNote').textContent = `${items[0].k} and ${items[1].k.toLowerCase()} make up ${Math.round(top2)}% of scrap value.`;
+}
+function renderRft() {
+  const lo = 80, hi = 100, pos = v => (v - lo) / (hi - lo) * 100;
+  $('#rftBars').innerHTML = D.stations.map(s => {
+    const below = s.v < D.rftTarget, col = s.v < 90 ? 'var(--bad)' : below ? 'var(--warn)' : 'var(--good)';
+    return `<div class="hb"><div class="nm">${s.k}<small>${s.d}</small></div><div class="track"><div class="fill" style="width:${pos(s.v)}%;background:${col}"></div><div class="mark" style="left:${pos(D.rftTarget)}%"></div></div><div class="v" style="color:${col}">${s.v.toFixed(1)}%</div></div>`;
+  }).join('');
+}
+
+/* ---------- Agents + feed ---------- */
+const stPill = { watch:['p-watch','Watching'], idle:['p-idle','Idle'], busy:['p-busy','Working'] };
+function renderAgents() {
+  $('#agents').innerHTML = AGENTS.map(a => `<div class="ag">
+    <span class="ico" style="background:var(--card-2);color:${a.c}">${svgIcon(a.ic)}</span>
+    <div style="min-width:0"><b>${esc(a.nm)}</b><small>${esc(a.role)}</small><span class="src">${esc(a.src)}</span></div>
+    <div class="ag-r"><span class="pill ${stPill[a.st][0]}">${stPill[a.st][1]}</span><span class="mono">${taskCount(a.id)} events this shift</span></div>
+  </div>`).join('');
+  $('#busyCount').textContent = AGENTS.filter(a => a.st === 'busy').length;
+}
+/* ---------- Event store: simulated Shift B history + live events ---------- */
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const KINDS = {
+  asm:{a:'asm', src:'MES', out:'Progress confirmed', kpi:'regions', dur:[2,5], lat:[8,40]},
+  qn:{a:'qual', src:'SAP QM', out:'Classified & assigned', kpi:'qn', dur:[1,3], lat:[10,45]},
+  qnclose:{a:'qual', src:'SAP QM', out:'Closed after rework', kpi:'qn', dur:[1,2], lat:[10,30]},
+  scrap:{a:'scrap', src:'SAP MM', out:'Scrap posted', kpi:'scrap', dur:[1,3], lat:[15,60]},
+  rft:{a:'rft', src:'Inspection', out:'Inspection result', kpi:'rft', dur:[2,4], lat:[20,70]},
+  rca:{a:'rca', src:'Torque logs', out:'8D / root cause', kpi:'qn', dur:[8,18], lat:[90,420], from:'qual'},
+  esc:{a:'orch', src:'Agent findings', out:'Escalated to shift lead', kpi:'qn', dur:[1,2], lat:[30,90]},
+  route:{a:'orch', src:null, out:null, kpi:'qn', dur:[0.5,1], lat:[3,10]},
+  rep:{a:'rep', src:'Agent findings', out:'Added to handover', kpi:null, dur:[3,6], lat:[30,120], from:'orch'},
+  cfg:{a:'orch', src:null, out:null, kpi:null, dur:[1,1], lat:[0,0]}
+};
+let seed = 20261020;
+const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const between = r => r[0] + rnd() * (r[1] - r[0]);
+const pick = arr => arr[Math.floor(rnd() * arr.length)];
+const EV = [], CASES = [];
+let nowMin = 298, focusA = null, caseI = 0;
+const hhmm = m => { const t = 14 * 60 + Math.floor(m); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
+const strip = s => String(s).replace(/<[^>]+>/g, '');
+const agentOf = id => AGENTS.find(x => x.id === id) || AGENTS[0];
+const abbr = a => ({orch:'LO', qual:'QS', scrap:'SA', asm:'AT', rft:'RF', rca:'RC', rep:'SR'})[a.id] || a.nm.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+function addEv(kind, text, t = nowMin, extra = {}) {
+  const K = KINDS[kind];
+  const kpi = K.kpi !== null ? K.kpi : (kind === 'rep' ? pick(['qn','scrap','regions','rft']) : null);
+  const e = Object.assign({t, kind, a:K.a, src:K.src, out:K.out, kpi, dur:between(K.dur), lat:Math.round(between(K.lat)), from:K.from || (K.a === 'orch' ? null : 'orch'), text}, extra);
+  EV.push(e); return e;
+}
+function emit(kind, text, extra) {
+  nowMin = Math.min(479, nowMin + 0.8);
+  const e = addEv(kind, text, nowMin, extra); e.fresh = true;
+  renderFeed(); renderAgents(); renderOrch(); flow(e);
+  $('#shiftPct').textContent = Math.round(nowMin / 480 * 100); $('#shiftBar').style.width = (nowMin / 480 * 100).toFixed(1) + '%';
+  return e;
+}
+const taskCount = id => id === 'orch' ? EV.filter(e => e.a === 'orch' || e.from === 'orch').length : EV.filter(e => e.a === id).length;
+function caseStep(c, kind, t, text) { const e = addEv(kind, text, t); c.steps.push({t, a:e.a, text}); return e; }
+function liveCase(no, cat, stn) {
+  const c = {id:'QN-' + no, title:`${cat}, routed to ${stn}`, status:'Open', steps:[], pending:'Rework and re-inspection'};
+  const q = EV[EV.length - 1]; c.steps.push({t:q.t, a:'qual', text:`classified QN-${no} as <b>${esc(cat)}</b>.`});
+  const r = addEv('route', `routed QN-${no} to the ${stn} owner.`, nowMin + 0.3); c.steps.push({t:r.t, a:'orch', text:r.text});
+  CASES.unshift(c); caseI = 0; renderTrace(); renderFeed();
+}
+
+/* feed */
+function renderFeed() {
+  const list = EV.filter(e => !focusA || e.a === focusA || (focusA !== 'orch' && e.from === focusA)).slice(-14).reverse();
+  $('#feed').innerHTML = list.map(e => { const a = agentOf(e.a); return `<li${e.fresh ? ' class="new"' : ''}><i style="background:${a.c}"></i><span><b>${esc(a.nm)}</b> ${e.text}</span><time>${hhmm(e.t)}</time></li>`; }).join('') || '<li><i></i><span style="color:var(--muted)">No events for this agent yet.</span><time></time></li>';
+  EV.forEach(e => e.fresh = false);
+  $('#evCount').textContent = EV.length + ' events this shift';
+}
+
+/* 1 · orchestration graph */
+const GC = [340, 205], GN = {orch: GC};
+const RING = {qual:210, rca:270, rft:330, asm:30, rep:90, scrap:150};
+const SRC_OF = {qual:'SAP QM', rca:'Torque logs', rft:'Inspection', asm:'MES', scrap:'SAP MM'};
+Object.entries(RING).forEach(([id, d]) => { const r = d * Math.PI / 180; GN[id] = [GC[0] + 162 * Math.cos(r), GC[1] + 115 * Math.sin(r)]; if (SRC_OF[id]) GN['src:' + SRC_OF[id]] = [GC[0] + 276 * Math.cos(r), GC[1] + 185 * Math.sin(r)]; });
+function renderGraph() {
+  const edges = [];
+  Object.keys(RING).forEach(id => {
+    if (SRC_OF[id]) edges.push(['src:' + SRC_OF[id], id, EV.filter(e => e.a === id && e.src === SRC_OF[id]).length, id]);
+    if (id === 'rep') edges.push(['orch', 'rep', EV.filter(e => e.a === 'rep').length, id]);
+    else edges.push([id, 'orch', EV.filter(e => e.a === id).length, id]);
+  });
+  edges.push(['qual', 'rca', EV.filter(e => e.kind === 'rca').length, 'rca']);
+  const mx = Math.max(1, ...edges.map(e => e[2]));
+  let s = '';
+  edges.forEach(([f, t, n, id]) => {
+    const [x1, y1] = GN[f], [x2, y2] = GN[t];
+    const dim = focusA && focusA !== id && !(focusA === 'orch' && (f === 'orch' || t === 'orch')) && !(focusA === 'qual' && f === 'qual');
+    s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${agentOf(id).c}" stroke-opacity="${dim ? .08 : .38}" stroke-width="${(1.2 + 6 * n / mx).toFixed(1)}" stroke-linecap="round"/>`;
+    if (!f.startsWith('src:') && !dim) s += `<text x="${((x1 + x2) / 2).toFixed(1)}" y="${((y1 + y2) / 2 + 4).toFixed(1)}" text-anchor="middle" class="ecount">${n}</text>`;
+  });
+  Object.entries(SRC_OF).forEach(([id, nm]) => { const [x, y] = GN['src:' + nm]; s += `<g opacity="${focusA && focusA !== id ? .35 : 1}"><rect x="${(x - 46).toFixed(1)}" y="${(y - 12).toFixed(1)}" width="92" height="24" rx="7" fill="var(--card-2)" stroke="var(--line)"/><text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle" class="gsrc">${nm}</text></g>`; });
+  ['orch', ...Object.keys(RING)].forEach(id => {
+    const a = agentOf(id), [x, y] = GN[id], big = id === 'orch', r = big ? 32 : 24, dim = focusA && focusA !== id, on = focusA === id;
+    s += `<g class="gnode" data-a="${id}" tabindex="0" role="button" aria-pressed="${on}" aria-label="${esc(a.nm)}, ${taskCount(id)} events. Focus all views on this agent" opacity="${dim ? .4 : 1}">
+      ${a.st === 'busy' && !reduceMotion ? `<circle class="halo" cx="${x}" cy="${y}" r="${r}" fill="none" stroke="var(--warn)" stroke-width="2"/>` : ''}
+      <circle class="core" cx="${x}" cy="${y}" r="${r}" fill="${big ? a.c : 'var(--card)'}" stroke="${on ? 'var(--fg)' : a.st === 'busy' ? 'var(--warn)' : a.c}" stroke-width="${on ? 3.5 : 2.5}"/>
+      <text x="${x}" y="${y + 4.5}" text-anchor="middle" class="gab" style="fill:${big ? 'var(--accent-fg)' : a.c}">${abbr(a)}</text>
+      <text x="${x}" y="${y + r + 15}" text-anchor="middle" class="gname">${esc(a.nm)}</text>
+      <text x="${x}" y="${y + r + 28}" text-anchor="middle" class="gsub">${a.st === 'busy' ? 'working…' : taskCount(id) + ' events'}</text></g>`;
+  });
+  $('#gStatic').innerHTML = s;
+}
+function setFocus(id) {
+  focusA = focusA === id ? null : id;
+  $('#clearFocus').hidden = $('#focusChip').hidden = !focusA;
+  $('#focusName').textContent = focusA ? agentOf(focusA).nm : '';
+  renderFeed(); renderOrch();
+}
+$('#gStatic').addEventListener('click', e => { const g = e.target.closest('[data-a]'); if (g) setFocus(g.dataset.a); });
+$('#gStatic').addEventListener('keydown', e => { const g = e.target.closest('[data-a]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setFocus(g.dataset.a); $(`#gStatic [data-a="${g.dataset.a}"]`)?.focus(); } });
+$('#clearFocus').addEventListener('click', () => setFocus(focusA));
+const parts = []; let raf = 0;
+function flow(e) {
+  if (reduceMotion) return;
+  const segs = [];
+  if (e.a === 'rep') segs.push(['orch', 'rep']);
+  else if (e.a === 'orch') { if (e.kind === 'route' || e.kind === 'esc') segs.push(['orch', 'rca'], ['orch', 'rep']); else return; }
+  else if (GN[e.a]) { if (e.kind === 'rca') segs.push(['qual', 'rca']); else if (SRC_OF[e.a]) segs.push(['src:' + SRC_OF[e.a], e.a]); segs.push([e.a, 'orch']); }
+  else return;
+  const t0 = performance.now(), col = agentOf(e.a).c;
+  segs.forEach((sg, i) => parts.push({a:GN[sg[0]], b:GN[sg[1]], t0:t0 + i * 700, d:700, col}));
+  if (!raf) raf = requestAnimationFrame(tick);
+}
+function tick(now) {
+  let s = '';
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i], k = (now - p.t0) / p.d;
+    if (k >= 1) { parts.splice(i, 1); continue; }
+    if (k < 0) continue;
+    const q = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, x = (p.a[0] + (p.b[0] - p.a[0]) * q).toFixed(1), y = (p.a[1] + (p.b[1] - p.a[1]) * q).toFixed(1);
+    s += `<circle cx="${x}" cy="${y}" r="10" fill="${p.col}" fill-opacity=".2"/><circle cx="${x}" cy="${y}" r="5" fill="${p.col}"/>`;
+  }
+  $('#gPart').innerHTML = s;
+  raf = parts.length ? requestAnimationFrame(tick) : 0;
+}
+
+/* 2 · shift swimlane */
+function renderLanes() {
+  const lanes = AGENTS, L = 150, R = 14, Tp = 40, rh = 30, W = 960, H = Tp + lanes.length * rh + 6;
+  const x = m => L + m / 480 * (W - L - R);
+  const idx = Object.fromEntries(lanes.map((a, i) => [a.id, i]));
+  const dimE = e => focusA && focusA !== e.a && focusA !== e.from;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Agent tasks per lane across Shift B, 14:00 to 22:00">`;
+  s += `<rect x="${x(nowMin).toFixed(1)}" y="${Tp - 6}" width="${(x(480) - x(nowMin)).toFixed(1)}" height="${H - Tp + 6}" fill="var(--card-2)"/>`;
+  for (let h = 0; h <= 8; h++) s += `<line x1="${x(h * 60)}" x2="${x(h * 60)}" y1="${Tp - 6}" y2="${H}" stroke="var(--line)"/><text x="${x(h * 60)}" y="12" text-anchor="middle">${14 + h}:00</text>`;
+  lanes.forEach((a, i) => { const y = Tp + i * rh; s += `<text x="0" y="${y + 19}" class="lane-l" opacity="${focusA && focusA !== a.id ? .4 : 1}">${esc(a.nm)}</text><line x1="${L}" x2="${W - R}" y1="${y + rh}" y2="${y + rh}" stroke="var(--line)" stroke-dasharray="2 4"/>`; });
+  EV.forEach(e => { if (e.from == null || idx[e.from] == null || idx[e.a] == null) return; const xx = x(e.t).toFixed(1); s += `<line x1="${xx}" x2="${xx}" y1="${Tp + idx[e.from] * rh + 15}" y2="${Tp + idx[e.a] * rh + 15}" stroke="${agentOf(e.a).c}" stroke-opacity="${dimE(e) ? .04 : .22}"/>`; });
+  EV.forEach(e => { const i = idx[e.a]; if (i == null) return; s += `<rect x="${x(e.t).toFixed(1)}" y="${Tp + i * rh + 8}" width="${Math.max(3, x(e.t + e.dur) - x(e.t)).toFixed(1)}" height="14" rx="3" fill="${agentOf(e.a).c}" fill-opacity="${dimE(e) ? .15 : .9}"><title>${hhmm(e.t)} · ${esc(agentOf(e.a).nm)} ${esc(strip(e.text))}</title></rect>`; });
+  s += `<line x1="${x(nowMin).toFixed(1)}" x2="${x(nowMin).toFixed(1)}" y1="${Tp - 6}" y2="${H}" stroke="var(--bad)" stroke-width="1.5"/><text x="${(x(nowMin) + 5).toFixed(1)}" y="${Tp - 12}" style="fill:var(--bad)">now ${hhmm(nowMin)}</text></svg>`;
+  $('#lanes').innerHTML = s;
+}
+
+/* 3 · incident trace */
+function renderTrace() {
+  const list = CASES.slice(0, 4); if (caseI >= list.length) caseI = 0; const c = list[caseI];
+  $('#caseSeg').innerHTML = list.map((x, i) => `<button type="button" data-i="${i}" aria-pressed="${i === caseI}">${x.id}</button>`).join('');
+  const t0 = c.steps[0].t, tEnd = c.steps[c.steps.length - 1].t;
+  $('#trace').innerHTML = `<div class="tr-h"><div><b>${c.id}</b><small>${esc(c.title)}</small></div><span class="pill ${c.status === 'Closed' ? 'p-done' : 'p-qn'}">${c.status}</span></div>
+    <ol class="tr">${c.steps.map(st => { const a = agentOf(st.a); return `<li style="--c:${a.c};opacity:${focusA && focusA !== st.a ? .45 : 1}"><time>${hhmm(st.t)}<small>+${Math.round(st.t - t0)} min</small></time><div><b>${esc(a.nm)}</b> ${st.text}</div></li>`; }).join('')}${c.pending ? `<li class="pend"><time>next</time><div>${esc(c.pending)}</div></li>` : ''}</ol>
+    <div class="foot-note">${c.status === 'Closed' ? 'Closed in' : 'Open for'} <b class="num">${Math.round((c.status === 'Closed' ? tEnd : nowMin) - t0)} min</b> · ${new Set(c.steps.map(s => s.a)).size} agents involved</div>`;
+}
+$('#caseSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { caseI = +b.dataset.i; renderTrace(); } });
+
+/* 4 · sankey */
+function renderSankey() {
+  const evs = EV.filter(e => e.src && e.out && (!focusA || e.a === focusA));
+  if (!evs.length) { $('#sankey').innerHTML = '<p class="foot-note">This agent has no source-to-outcome flows yet.</p>'; return; }
+  const LISTS = [['SAP QM','MES','SAP MM','Inspection','Torque logs','Agent findings'], ['qual','asm','scrap','rft','rca','orch','rep'], ['Classified & assigned','Closed after rework','Progress confirmed','Scrap posted','Inspection result','8D / root cause','Escalated to shift lead','Added to handover']];
+  const keyOf = (e, ci) => ci === 0 ? e.src : ci === 1 ? e.a : e.out;
+  const cols = LISTS.map((list, ci) => list.map(k => ({k, ci, v:evs.filter(e => keyOf(e, ci) === k).length})).filter(n => n.v));
+  const W = 960, H = 360, NW = 12, G = 10, T = 26, X = [150, 470, 790];
+  const k = Math.min(...cols.map(c => (H - T - 6 - G * (c.length - 1)) / evs.length));
+  cols.forEach(c => { let y = T; c.forEach(n => { n.y = y; n.h = n.v * k; n.oIn = 0; n.oOut = 0; y += n.h + G; }); });
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Flow of ${evs.length} events from data sources to agents to outcomes">`;
+  s += `<text x="${X[0] + NW}" y="12" text-anchor="end" class="sk-h">Data source</text><text x="${X[1]}" y="12" class="sk-h">Agent</text><text x="${X[2]}" y="12" class="sk-h">Outcome</text>`;
+  const band = (A, B, v, col) => { const t = v * k, x0 = X[A.ci] + NW, x1 = X[B.ci], y0 = A.y + A.oOut, y1 = B.y + B.oIn, xm = (x0 + x1) / 2; A.oOut += t; B.oIn += t;
+    return `<path d="M${x0},${y0.toFixed(1)} C${xm},${y0.toFixed(1)} ${xm},${y1.toFixed(1)} ${x1},${y1.toFixed(1)} L${x1},${(y1 + t).toFixed(1)} C${xm},${(y1 + t).toFixed(1)} ${xm},${(y0 + t).toFixed(1)} ${x0},${(y0 + t).toFixed(1)} Z" fill="${col}" fill-opacity=".32"><title>${esc(A.ci === 1 ? agentOf(A.k).nm : A.k)} → ${esc(B.ci === 1 ? agentOf(B.k).nm : B.k)}: ${v}</title></path>`; };
+  cols[0].forEach(S => cols[1].forEach(A => { const v = evs.filter(e => e.src === S.k && e.a === A.k).length; if (v) s += band(S, A, v, agentOf(A.k).c); }));
+  cols[1].forEach(A => cols[2].forEach(O => { const v = evs.filter(e => e.a === A.k && e.out === O.k).length; if (v) s += band(A, O, v, agentOf(A.k).c); }));
+  cols.forEach((c, ci) => c.forEach(n => {
+    const label = ci === 1 ? esc(agentOf(n.k).nm) : esc(n.k), ty = (n.y + n.h / 2 + 4).toFixed(1);
+    s += `<rect x="${X[ci]}" y="${n.y.toFixed(1)}" width="${NW}" height="${Math.max(n.h, 1.5).toFixed(1)}" rx="3" fill="${ci === 1 ? agentOf(n.k).c : 'var(--faint)'}"/>`;
+    if (ci === 0) s += `<text x="${X[0] - 8}" y="${ty}" text-anchor="end" class="sk-l">${label} <tspan class="sk-n">${n.v}</tspan></text>`;
+    else s += `<text x="${X[ci] + NW + 7}" y="${ty}" class="sk-l">${label} <tspan class="sk-n">${n.v}</tspan></text>`;
+  }));
+  $('#sankey').innerHTML = s + '</svg>';
+}
+
+/* 5 · agents on the fuselage */
+function renderFusAgents() {
+  const m = MSNS[msnI], lastDone = m.reg.map(r => r.st).lastIndexOf('done');
+  const tags = SECTIONS.map((sec, i) => { const r = m.reg[i], t = []; if (r.st === 'qn') t.push('qual', 'rca'); else if (r.st === 'inwork') { t.push('asm'); if (r.qn) t.push('qual'); } else if (i === lastDone) t.push('rft'); return t; });
+  let s = `<svg viewBox="0 10 960 270" role="img" aria-label="Agents working on each fuselage section of MSN ${m.id}"><defs><clipPath id="fc2"><path d="${FUS_PATH}"/></clipPath></defs><g clip-path="url(#fc2)">`;
+  SECTIONS.forEach((sec, i) => { s += `<rect x="${sec.x0}" y="40" width="${sec.x1 - sec.x0}" height="120" fill="${stColor[m.reg[i].st]}" fill-opacity="${m.reg[i].st === 'planned' ? 1 : .3}"/><line x1="${sec.x1}" x2="${sec.x1}" y1="40" y2="160" stroke="var(--card)" stroke-width="2"/>`; });
+  s += `</g><path class="outline" d="${FUS_PATH}"/>`;
+  SECTIONS.forEach((sec, i) => {
+    const cx = (sec.x0 + sec.x1) / 2; s += `<text x="${cx}" y="30" text-anchor="middle" style="font-size:14px">${sec.id}</text>`;
+    tags[i].forEach((id, k) => { const a = agentOf(id), cy = 192 + k * 38;
+      if (k === 0) s += `<line x1="${cx}" x2="${cx}" y1="152" y2="${cy - 17}" stroke="${a.c}" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+      s += `<g opacity="${focusA && focusA !== id ? .3 : 1}"><circle cx="${cx}" cy="${cy}" r="16" fill="${a.c}"${a.st === 'busy' ? ' stroke="var(--warn)" stroke-width="4"' : ''}/><text x="${cx}" y="${cy + 5}" text-anchor="middle" style="fill:var(--card);font-size:13px;font-weight:800">${abbr(a)}</text><title>${esc(a.nm)} on ${sec.id}</title></g>`; });
+  });
+  $('#fusAg').innerHTML = s + '</svg>';
+  $('#fusAgList').innerHTML = tags.map((t, i) => t.length ? `<li><b class="num">${SECTIONS[i].id}</b> ${t.map(id => esc(agentOf(id).nm)).join(' + ')} · <span style="color:var(--muted)">${stLabel[m.reg[i].st]}${m.reg[i].qn ? `, ${m.reg[i].qn} open QN` : ''}</span></li>` : '').join('') || '<li style="color:var(--muted)">No agents attached to this aircraft right now.</li>';
+  $('#fusAgMsn').textContent = `${m.type} · MSN ${m.id} · which agent is on which section right now`;
+}
+
+/* 6 · agent × KPI heatmap */
+function renderHeat() {
+  const K = [['qn','QNs'],['scrap','Scrap'],['regions','Regions'],['rft','RFT']];
+  const rows = AGENTS.map(a => ({a, v:K.map(([k]) => EV.filter(e => e.a === a.id && e.kpi === k).length)}));
+  const mx = Math.max(1, ...rows.flatMap(r => r.v));
+  let h = `<div class="heat" role="table" aria-label="Agent actions per KPI this shift"><div role="row" class="hrow hhead"><span></span>${K.map(([, n]) => `<span>${n}</span>`).join('')}<span>Total</span></div>`;
+  rows.forEach(r => { h += `<div role="row" class="hrow" style="opacity:${focusA && focusA !== r.a.id ? .4 : 1}"><span class="hname">${esc(r.a.nm)}</span>${r.v.map(v => { const p = Math.round(v / mx * 100); return `<span class="hcell" style="background:color-mix(in srgb, var(--accent) ${v ? Math.max(p, 8) : 0}%, var(--card-2));color:${p > 55 ? 'var(--accent-fg)' : v ? 'var(--fg)' : 'var(--faint)'}">${v || '·'}</span>`; }).join('')}<span class="htot num">${sum(r.v)}</span></div>`; });
+  $('#heat').innerHTML = h + '</div><p class="foot-note">Shift Reporter actions count against the KPI each handover note covered.</p>';
+}
+
+/* 7 · load + response time */
+function renderLoad() {
+  const B = 15, nb = Math.max(1, Math.ceil(nowMin / B)), ids = AGENTS.map(a => a.id);
+  const busyM = ids.map(id => Array.from({length:nb}, (_, b) => { const b0 = b * B, b1 = b0 + B; return EV.filter(e => e.a === id).reduce((acc, e) => acc + Math.max(0, Math.min(b1, e.t + e.dur) - Math.max(b0, e.t)), 0) / B; }));
+  const cnt = Array.from({length:nb}, (_, b) => EV.filter(e => e.t >= b * B && e.t < (b + 1) * B).length);
+  const tot = Array.from({length:nb}, (_, b) => sum(busyM.map(s => s[b])));
+  const ymax = Math.max(0.5, Math.ceil(Math.max(...tot) * 2) / 2);
+  const W = 640, H = 190, L = 36, R = 10, T = 10, Bt = 22;
+  const x = m => L + m / 480 * (W - L - R), y = v => T + (1 - v / ymax) * (H - T - Bt);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Average agents busy per 15 minutes, stacked by agent">`;
+  [0, ymax / 2, ymax].forEach(v => s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`);
+  for (let h = 0; h <= 8; h += 2) s += `<text x="${x(h * 60)}" y="${H - 6}" text-anchor="middle">${14 + h}:00</text>`;
+  let base = Array(nb).fill(0);
+  ids.forEach((id, i) => {
+    const top = base.map((b0, b) => b0 + busyM[i][b]);
+    const up = top.map((v, b) => `${x(b * B + B / 2).toFixed(1)},${y(v).toFixed(1)}`), dn = base.map((v, b) => `${x(b * B + B / 2).toFixed(1)},${y(v).toFixed(1)}`).reverse();
+    s += `<polygon points="${up.join(' ')} ${dn.join(' ')}" fill="${agentOf(id).c}" fill-opacity="${focusA && focusA !== id ? .12 : .78}"><title>${esc(agentOf(id).nm)}</title></polygon>`;
+    base = top;
+  });
+  s += `<line x1="${x(nowMin)}" x2="${x(nowMin)}" y1="${T}" y2="${H - Bt}" stroke="var(--bad)" stroke-dasharray="4 3"/></svg>`;
+  const H2 = 64, cm = Math.max(1, ...cnt), y2 = v => 6 + (1 - v / cm) * (H2 - 22);
+  let s2 = `<svg viewBox="0 0 ${W} ${H2}" role="img" aria-label="Events received per 15 minutes">`;
+  cnt.forEach((v, b) => s2 += `<rect x="${(x(b * B) + 1.5).toFixed(1)}" y="${y2(v).toFixed(1)}" width="${(x(B) - x(0) - 3).toFixed(1)}" height="${(y2(0) - y2(v)).toFixed(1)}" rx="2" fill="var(--accent)" fill-opacity=".5"><title>${hhmm(b * B)}: ${v} events</title></rect>`);
+  s2 += `<text x="${L - 6}" y="${y2(cm) + 8}" text-anchor="end">${cm}</text><text x="${W - R}" y="${H2 - 3}" text-anchor="end">events per 15 min</text></svg>`;
+  $('#load').innerHTML = s + s2 + `<div class="lg">${AGENTS.map(a => `<span><i style="background:${a.c}"></i>${esc(a.nm)}</span>`).join('')}</div>`;
+  const lats = EV.filter(e => e.kind !== 'cfg').map(e => e.lat).sort((a, b) => a - b);
+  const q = p => lats[Math.min(lats.length - 1, Math.floor(p * lats.length))];
+  const fmtS = v => v < 60 ? v + ' s' : (v / 60).toFixed(1) + ' min';
+  const spec = EV.filter(e => e.out), escN = spec.filter(e => e.out === 'Escalated to shift lead').length;
+  $('#loadStats').innerHTML = [[fmtS(q(.5)), 'Median time from event to first agent action'], [fmtS(q(.9)), '90th percentile response'], [Math.round((1 - escN / spec.length) * 100) + '%', 'Handled without a person'], [escN, 'Escalated to the shift lead']].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+}
+
+function renderOrch() { renderGraph(); renderLanes(); renderTrace(); renderSankey(); renderFusAgents(); renderHeat(); renderLoad(); }
+function busy(id, ms = 2600) {
+  const a = AGENTS.find(x => x.id === id); if (!a) return;
+  a.st = 'busy'; renderAgents(); renderGraph();
+  setTimeout(() => { a.st = id === 'orch' ? 'watch' : 'idle'; renderAgents(); renderGraph(); }, ms);
+}
+
+/* ---------- Shift B history so far (simulated, seeded) ---------- */
+const MSN_IDS = ['11842', '11847', '11851'];
+const histText = {
+  asm: () => `logged progress on ${pick(['S11','S12','S16','S19'])}, MSN ${pick(MSN_IDS)}.`,
+  rft: () => { const s = pick(D.stations); return `recomputed ${s.k} (${s.d.toLowerCase()}): <b class="num">${s.v.toFixed(1)}%</b> first-pass.`; },
+  scrap: () => `posted <b class="num">€${(0.1 + rnd() * 0.4).toFixed(1)}k</b> for ${pick(['rejected Hi-Lok collars','a mis-drilled frame clip','sealant past pot life'])}.`,
+  qn: () => `classified QN-${4440 + Math.floor(rnd() * 25)} as <b>${pick(D.qnCats).k}</b>.`,
+  qnclose: () => `closed QN-${4410 + Math.floor(rnd() * 25)} after rework sign-off.`,
+  rca: () => `checked torque logs for a common cause on ${pick(['S13/S14','S14A/S15'])}.`,
+  rep: () => `updated the handover draft with the latest findings.`,
+  esc: () => `escalated a repeat gap & flush finding to the shift lead.`,
+  route: () => `routed ${pick(['a sealant finding','a missing-fastener finding','an FOD report'])} to the station owner.`
+};
+Object.entries({asm:34, rft:22, scrap:9, qn:3, qnclose:3, rca:1, rep:6, esc:1, route:4}).forEach(([k, n]) => { for (let i = 0; i < n; i++) addEv(k, histText[k](), 4 + rnd() * 285); });
+const cS = {id:'SCR-0912', title:'S16 skin panel dent, MSN 11842', status:'Closed', steps:[]};
+caseStep(cS, 'rft', 148, 'found a dent on the S16 skin panel at first-pass inspection, beyond repair limit.');
+caseStep(cS, 'route', 148.7, 'routed the finding to the Scrap Analyst and to planning.');
+caseStep(cS, 'scrap', 152, 'posted <b class="num">€6.2k</b> scrap for the S16 skin panel.');
+caseStep(cS, 'rep', 158, 'added the replacement-panel lead time to the handover.');
+const cA = {id:'QN-4466', title:'Gap & flush, MSN 11847 S14A', status:'Closed', steps:[]};
+caseStep(cA, 'qn', 226, 'classified QN-4466 as <b>Gap & flush</b> on MSN 11847 S14A.');
+caseStep(cA, 'route', 226.8, 'routed QN-4466 to the Stn 20 owner.');
+caseStep(cA, 'qnclose', 259, 'closed QN-4466 after shim rework sign-off.');
+caseStep(cA, 'rft', 262, 're-inspected S14A: accepted after rework.');
+const cB = {id:'QN-4471', title:'Fastener installation, MSN 11847 S15', status:'Open', steps:[], pending:'Rework sign-off, then S15 release'};
+caseStep(cB, 'qn', 281, 'classified QN-4471 as <b>Fastener installation</b> on MSN 11847 S15.');
+caseStep(cB, 'route', 281.7, 'routed QN-4471 to the Stn 30 owner and the Root Cause Agent.');
+caseStep(cB, 'rca', 284, 'pulled torque logs for the S15/S16 join: 7 of 11 fastener QNs share a collar torque deviation.');
+caseStep(cB, 'esc', 291, 'escalated to the shift lead and held S15.');
+caseStep(cB, 'rca', 296, 'opened 8D-0193. Containment: second-person check on collar installs.');
+CASES.push(cB, cA, cS);
+addEv('rft', 'flagged Stn 20 at <b class="num">88.1%</b>, below the 90% alert limit.', 293);
+addEv('rep', 'drafted the mid-shift summary for Shift B.', 294.5);
+addEv('scrap', 'posted €0.4k for 18 Hi-Lok collars rejected at torque check.', 297);
+EV.sort((a, b) => a.t - b.t);
+
+/* ---------- Simulation ---------- */
+let qnNo = 4472;
+function advanceRegion() {
+  for (const m of MSNS) {
+    const i = m.reg.findIndex(r => r.st === 'inwork');
+    if (i < 0) continue;
+    const r = m.reg[i];
+    r.prog = Math.min(100, r.prog + 25);
+    if (r.prog >= 100) {
+      r.st = 'done'; r.prog = 100;
+      const nx = m.reg.findIndex((x, k) => k > i && x.st === 'planned');
+      if (nx >= 0) { m.reg[nx].st = 'inwork'; m.reg[nx].prog = 10; }
+      D.regDaily[6]++;
+      return [m, SECTIONS[i], true];
+    }
+    return [m, SECTIONS[i], false];
+  }
+  return null;
+}
+const EVENTS = [
+  () => { const res = advanceRegion(); if (!res) return; const [m, s, done] = res;
+    busy('asm'); emit('asm',done ? `confirmed <b>${s.id}</b> assembled on MSN ${m.id}. Week total now <b class="num">${sum(D.regDaily)}</b>.` : `logged progress on ${s.id}, MSN ${m.id} (${m.reg[SECTIONS.indexOf(s)].prog}%).`);
+    if (done) { busy('orch', 1200); renderKpis(); if (trendK === 'regions') renderTrend(); }
+    renderFus(); },
+  () => { const cats = [0,0,0,1,1,2,3,4]; const ci = cats[Math.floor(Math.random()*cats.length)]; const c = D.qnCats[ci];
+    c.n++; D.qnDaily[6]++; D.qnOpen++; const no = qnNo++;
+    busy('qual'); const stn = ['Stn 20','Stn 30','Stn 10','Stn 40'][ci % 4];
+    emit('qn', `classified QN-${no} as <b>${c.k}</b> and assigned it to ${stn}.`);
+    liveCase(no, c.k, stn);
+    renderKpis(); renderDonut(); if (trendK === 'qn') renderTrend();
+    if (D.qnDaily[6] > 5) { setTimeout(() => { busy('rca'); const e = emit('rca', `today's QNs (<b class="num">${D.qnDaily[6]}</b>) passed the 5/day limit. Checking torque logs for a common cause.`);
+      const cs = CASES.find(x => x.id === 'QN-' + no); if (cs) { cs.steps.push({t:e.t, a:'rca', text:'checked torque logs because today\'s QNs passed the 5/day limit.'}); renderTrace(); } }, 900); } },
+  () => { if (D.qnOpen <= 8) return; D.qnOpen--; busy('qual', 1800); emit('qnclose',`closed QN-${qnNo - 1 - Math.floor(Math.random()*30)} after rework sign-off. <b class="num">${D.qnOpen}</b> open.`); renderKpis(); },
+  () => { const v = +(0.1 + Math.random() * 0.3).toFixed(1); D.scrapDaily[6] = +(D.scrapDaily[6] + v).toFixed(1); D.scrap.find(x => x.k === 'Fasteners & collars').v = +(D.scrap.find(x => x.k === 'Fasteners & collars').v + v).toFixed(1);
+    busy('scrap'); emit('scrap',`posted <b class="num">€${v.toFixed(1)}k</b> for rejected Hi-Lok collars. Today €${D.scrapDaily[6].toFixed(1)}k.`);
+    renderKpis(); renderScrap(); if (trendK === 'scrap') renderTrend(); },
+  () => { const s = D.stations[Math.floor(Math.random()*D.stations.length)]; busy('rft'); emit('rft',`recomputed ${s.k} (${s.d.toLowerCase()}): <b class="num">${s.v.toFixed(1)}%</b> first-pass.`); },
+  () => { busy('orch', 1500); emit('route', `reminded the shift lead that MSN ${MSNS[1].id} S15 is still held.`); },
+  () => { busy('rep', 3000); emit('rep',`updated the handover draft with the latest ${['scrap','QN','section','RFT'][Math.floor(Math.random()*4)]} findings.`); }
+];
+const WEIGHTS = [3, 2, 1, 2, 2, 1, 1];
+function pickEvent() { const t = sum(WEIGHTS); let r = Math.random() * t; for (let i = 0; i < WEIGHTS.length; i++) { r -= WEIGHTS[i]; if (r < 0) return EVENTS[i]; } return EVENTS[0]; }
+let timer = null, running = true;
+function start() { if (!timer) timer = setInterval(() => { pickEvent()(); }, 3800); }
+function stop() { clearInterval(timer); timer = null; }
+$('#toggleSim').addEventListener('click', () => {
+  running = !running; running ? start() : stop();
+  $('#toggleSim').textContent = running ? 'Pause agents' : 'Resume agents';
+  $('#toggleSim').setAttribute('aria-pressed', !running);
+  $('#liveState').dataset.on = running; $('#liveText').textContent = running ? 'Agents running' : 'Agents paused';
+});
+
+/* ---------- Assistant ---------- */
+function insight() {
+  const fast = D.qnCats[0].n;
+  $('#insightText').innerHTML = `Stn 20 (orbital join) runs at <b>88.1%</b> RFT, 6.9 pts under target. The Root Cause Agent ties 7 of ${fast} fastener QNs to Hi-Lok collar torque on the S15/S16 join.`;
+}
+function answer(q) {
+  const t = q.toLowerCase();
+  const qn = sum(D.qnDaily), sc = sum(D.scrapDaily), rg = sum(D.regDaily), rft = avg(D.rftDaily);
+  if (/rft|right|first|station/.test(t)) {
+    const worst = [...D.stations].sort((a, b) => a.v - b.v);
+    return `RFT is <b>${f1(rft)}%</b> over the last 7 days, ${f1(D.rftTarget - rft)} pts under the 95% target. The gap sits mostly at <b>${worst[0].k} ${worst[0].d}</b> (${worst[0].v}%) and ${worst[1].k} ${worst[1].d} (${worst[1].v}%). Fastener installation is the largest QN class (${D.qnCats[0].n}), and most of those come from the orbital join. Suggested action: torque-tool calibration check at Stn 20 and a second-person verification on collar installs for two shifts.`;
+  }
+  if (/scrap|cost|€|waste/.test(t)) {
+    const it = [...D.scrap].sort((a, b) => b.v - a.v);
+    return `Scrap is <b>${eur(sc)}</b> this week, down ${Math.abs((sc - D.scrapPrev)/D.scrapPrev*100).toFixed(0)}% on the week before. Top drivers: ${it.slice(0,3).map(x => `${x.k} ${eur(x.v)} (${x.d})`).join('; ')}. The S16 skin panel is a single event; frame clip mis-drills repeat, so the Scrap Analyst recommends a drill-template check at FR47.`;
+  }
+  if (/held|block|qn|complaint|quality|notification/.test(t)) {
+    const held = []; MSNS.forEach(m => m.reg.forEach((r, i) => { if (r.st === 'qn') held.push(`MSN ${m.id} ${SECTIONS[i].id} (${r.qn} QNs)`); }));
+    return `${qn} quality notifications in the last 7 days, <b>${D.qnOpen}</b> still open. Held sections: <b>${held.join(', ') || 'none'}</b>. Largest classes: ${D.qnCats.slice(0,3).map(c => `${c.k} ${c.n}`).join(', ')}.`;
+  }
+  if (/section|region|assembl|msn|progress/.test(t)) {
+    return `${rg} regions assembled in the last 7 days against a plan of ${D.regPlan} (${(rg/D.regPlan*100).toFixed(1)}%). ${MSNS.map(m => `MSN ${m.id}: ${m.reg.filter(r => r.st === 'done').length}/10`).join(' · ')}.`;
+  }
+  if (/handover|shift|summary|report/.test(t)) {
+    busy('rep', 2500);
+    return `<b>Shift B → C handover</b><br>• Regions: ${rg}/${D.regPlan} for the week, today ${D.regDaily[6]}.<br>• Quality: ${D.qnDaily[6]} QNs today, ${D.qnOpen} open; MSN 11847 S15 held, 8D running.<br>• Scrap today: ${eur(D.scrapDaily[6])}, mainly Hi-Lok collars.<br>• RFT today: ${D.rftDaily[6]}%; Stn 20 still the weak point.<br>• For Shift C: torque-tool check at Stn 20 before first S15/S16 join.`;
+  }
+  return `I can answer about quality complaints, scrap, assembled regions, RFT, a specific MSN, or write the shift handover. Try "What drives scrap this week?"`;
+}
+function ask(q) {
+  if (!q.trim()) return;
+  const chat = $('#chat');
+  chat.insertAdjacentHTML('beforeend', `<div class="bubble me">${esc(q)}</div>`);
+  busy('orch', 1200);
+  setTimeout(() => { chat.insertAdjacentHTML('beforeend', `<div class="bubble">${answer(q)}</div>`); chat.scrollTop = chat.scrollHeight; }, 450);
+  chat.scrollTop = chat.scrollHeight;
+}
+document.querySelectorAll('.qa button').forEach(b => b.addEventListener('click', () => ask(b.dataset.ask)));
+$('#askForm').addEventListener('submit', e => { e.preventDefault(); ask($('#askInput').value); $('#askInput').value = ''; });
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') { ask($('#q').value); $('#q').value = ''; } });
+
+/* ---------- New agent ---------- */
+const toast = msg => { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2600); };
+$('#newAgent').addEventListener('click', () => { $('#modal').hidden = false; $('#agName').focus(); });
+$('#cancelAgent').addEventListener('click', () => $('#modal').hidden = true);
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') $('#modal').hidden = true; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#modal').hidden = true; });
+$('#agentForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const kpi = $('#agKpi').value, map = {qn:['shield','var(--c5)'], scrap:['bin','var(--c4)'], regions:['plane','var(--c2)'], rft:['check','var(--good)']};
+  const a = {id:'a' + Date.now(), nm:$('#agName').value.trim() || 'New agent', role:`Watches ${$('#agKpi').selectedOptions[0].text.toLowerCase()}`, src:$('#agSrc').value.trim() || 'not connected', c:map[kpi][1], ic:map[kpi][0], st:'idle', tasks:0};
+  AGENTS.push(a); renderAgents(); emit('cfg', `added <b>${esc(a.nm)}</b> to the roster.`);
+  $('#modal').hidden = true; e.target.reset(); toast('Agent added');
+});
+
+/* ---------- Boot ---------- */
+renderKpis(); renderTrend(); renderDonut(); renderMsnSeg(); renderFus(); renderScrap(); renderRft(); renderAgents(); insight(); renderFeed(); renderOrch();
+$('#shiftPct').textContent = Math.round(nowMin / 480 * 100); $('#shiftBar').style.width = (nowMin / 480 * 100).toFixed(1) + '%';
+start();
+})();
+</script>
+
+</body>
+</html>
