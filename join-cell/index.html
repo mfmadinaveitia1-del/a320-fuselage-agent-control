@@ -7,30 +7,30 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: engineering console. Isometric cell stage left, inspector / agent roster / edge nodes right, event trace and concept map underneath. Single committed dark look, same family as the Agent Company control center. */
 :root {
-  color-scheme: dark;
-  --bg: #090e12;
-  --panel: #0e151b;
-  --panel-2: #131d25;
-  --line: #1e2b36;
-  --fg: #d8e3ea;
-  --muted: #7890a1;
-  --faint: #3f5363;
-  --accent: #5fd4e6;   /* digital twin */
-  --agent: #b98cff;    /* agent mesh */
-  --edge: #4fd6a0;     /* edge AI */
-  --robot: #ff8a2a;    /* physical robots */
-  --iot: #7aa7ff;      /* IoT sensors */
-  --warn: #ffb547;
-  --crit: #ff5c72;
-  --idle: #5b84a8;
-  --font-display: "Chakra Petch", "Rajdhani", "Segoe UI", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-  --r: 6px;
+  color-scheme: light;
+  --bg: #eef1f8;
+  --panel: #ffffff;
+  --panel-2: #f6f8fd;
+  --line: #e3e7f1;
+  --fg: #161b2e;
+  --muted: #69718a;
+  --faint: #b9c0d2;
+  --accent: #0e8fa3;   /* digital twin */
+  --agent: #6d4fd6;    /* agent mesh */
+  --edge: #14946a;     /* edge AI */
+  --robot: #e8701a;    /* physical robots */
+  --iot: #4456e0;      /* IoT sensors */
+  --warn: #c47d0e;
+  --crit: #d23f58;
+  --idle: #6a86a8;
+  --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --r: 12px;
 }
 * { box-sizing: border-box; }
 body {
@@ -87,7 +87,7 @@ button { font: inherit; color: inherit; }
 .canvas-wrap {
   position: relative; width: 100%; aspect-ratio: 16 / 10; max-width: 100%;
   background:
-    radial-gradient(ellipse at 50% 40%, rgb(95 212 230 / .05), transparent 60%),
+    radial-gradient(ellipse at 50% 40%, rgb(68 86 224 / .05), transparent 60%),
     var(--panel);
 }
 .canvas-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
@@ -101,7 +101,8 @@ button { font: inherit; color: inherit; }
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); }
 .btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: var(--r); padding: 7px 12px; cursor: pointer; font: 600 11px var(--font-display); letter-spacing: .1em; text-transform: uppercase; }
 .btn:hover { border-color: var(--faint); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #032027; }
+.btn.primary { background: #4456e0; border-color: #4456e0; color: #ffffff; }
+.panel { box-shadow: 0 1px 2px rgba(22,27,46,.04), 0 6px 18px rgba(40,52,110,.06); }
 .btn.crit { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 45%, var(--line)); }
 .btn.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -339,7 +340,8 @@ button { font: inherit; color: inherit; }
 @media (min-width: 760px) {
   .embed .main { grid-template-columns: minmax(0, 1fr) 320px; align-items: stretch; }
   .embed .side { display: flex !important; flex-direction: column; contain: size; overflow: hidden; }
-  .embed .side > section:nth-child(2) { flex: 1; min-height: 0; overflow: auto; }
+  .embed .side > section:nth-child(2) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .embed .side > section:nth-child(2) .roster { flex: 1; min-height: 0; overflow: auto; }
 }
 </style>
 </head>
@@ -608,17 +610,17 @@ function buildCaches() { withCtx(cacheA, drawStaticFloor); withCtx(cacheB, drawS
 
 function drawStaticFloor() {
   const e = 10;
-  poly([[-e, -e, 0], [e, -e, 0], [e, e, 0], [-e, e, 0]], '#0c141a');
-  g.strokeStyle = 'rgba(120,160,185,0.07)'; g.lineWidth = 1;
+  poly([[-e, -e, 0], [e, -e, 0], [e, e, 0], [-e, e, 0]], '#e6eaf3');
+  g.strokeStyle = 'rgba(68,86,224,0.10)'; g.lineWidth = 1;
   for (let i = -e; i <= e; i += 1) { line([i, -e, 0], [i, e, 0]); line([-e, i, 0], [e, i, 0]); }
-  poly([[X0, -2.1, 0], [X1, -2.1, 0], [X1, 2.1, 0], [X0, 2.1, 0]], 'rgba(0,0,0,0.38)');
+  poly([[X0, -2.1, 0], [X1, -2.1, 0], [X1, 2.1, 0], [X0, 2.1, 0]], 'rgba(22,27,46,0.10)');
   // AGV lanes
-  g.setLineDash([5, 6]); g.strokeStyle = 'rgba(230,190,40,0.32)';
+  g.setLineDash([5, 6]); g.strokeStyle = 'rgba(196,142,18,0.32)';
   for (const s of [-1, 1]) { line([-8.7, s * 7.6, 0], [7.9, s * 7.6, 0]); line([-8.7, s * 8.4, 0], [7.9, s * 8.4, 0]); }
   g.setLineDash([]);
   // rail safety zones + maintenance bays
   for (const s of [-1, 1]) {
-    poly([[-8, s * 5.6 - 1.05, 0], [8, s * 5.6 - 1.05, 0], [8, s * 5.6 + 1.05, 0], [-8, s * 5.6 + 1.05, 0]], 'rgba(230,190,40,0.035)', 'rgba(230,190,40,0.3)', 1);
+    poly([[-8, s * 5.6 - 1.05, 0], [8, s * 5.6 - 1.05, 0], [8, s * 5.6 + 1.05, 0], [-8, s * 5.6 + 1.05, 0]], 'rgba(196,142,18,0.035)', 'rgba(196,142,18,0.3)', 1);
     g.setLineDash([3, 4]);
     for (const xe of [-7.5, 7.5]) poly([[xe - .75, s * 5.6 - .95, 0], [xe + .75, s * 5.6 - .95, 0], [xe + .75, s * 5.6 + .95, 0], [xe - .75, s * 5.6 + .95, 0]], null, hexA(COL.crit, .45), 1);
     g.setLineDash([]);
@@ -642,15 +644,15 @@ function fence(seg2, alpha) {
   for (let i = 0; i < n; i++) {
     const t0 = i / n, t1 = (i + 1) / n;
     const x0 = lerp(ax, bx, t0), y0 = lerp(ay, by, t0), x1 = lerp(ax, bx, t1), y1 = lerp(ay, by, t1);
-    poly([[x0, y0, 0.1], [x1, y1, 0.1], [x1, y1, 2.2], [x0, y0, 2.2]], `rgba(230,190,40,${0.05 * alpha})`);
+    poly([[x0, y0, 0.1], [x1, y1, 0.1], [x1, y1, 2.2], [x0, y0, 2.2]], `rgba(196,142,18,${0.05 * alpha})`);
   }
-  g.strokeStyle = `rgba(230,190,40,${0.75 * alpha})`; g.lineWidth = Math.max(1, k * .07);
+  g.strokeStyle = `rgba(196,142,18,${0.75 * alpha})`; g.lineWidth = Math.max(1, k * .07);
   for (let i = 0; i <= n; i++) { const x = lerp(ax, bx, i / n), y = lerp(ay, by, i / n); line([x, y, 0], [x, y, 2.2]); }
   g.lineWidth = Math.max(1, k * .05);
   line([ax, ay, 2.2], [bx, by, 2.2]); line([ax, ay, 1.1], [bx, by, 1.1]);
 }
 function label(text, p, color, size = 10, bg) {
-  g.font = `500 ${size}px "JetBrains Mono", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `500 ${size}px "IBM Plex Mono", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
   if (bg) { const w = g.measureText(text).width + 8; g.fillStyle = bg; g.fillRect(p[0] - w / 2, p[1] - size * .75, w, size * 1.5); }
   g.fillStyle = color; g.fillText(text, p[0], p[1]);
 }
@@ -685,10 +687,10 @@ function drawStaticFuselage() {
   poly(ring, '#10181a', rgba(c21, 1.1), Math.max(1.5, k * .1));
   const inner = ring.map(p => [X1 - .5, p[1] * .94, ZC + (p[2] - ZC) * .94]);
   poly(inner, null, 'rgba(160,175,140,0.25)', 1);
-  g.strokeStyle = 'rgba(190,200,210,0.6)'; g.lineWidth = Math.max(1, k * .08);
+  g.strokeStyle = 'rgba(80,92,120,0.55)'; g.lineWidth = Math.max(1, k * .08);
   const fz = ZC - .8, fy = Math.sqrt(R * R - .8 * .8);
   line([X1, -fy, fz], [X1, fy, fz]);
-  g.lineWidth = 1; g.strokeStyle = 'rgba(190,200,210,0.25)';
+  g.lineWidth = 1; g.strokeStyle = 'rgba(80,92,120,0.25)';
   for (let y = -1.6; y <= 1.61; y += .4) line([X1, y, fz], [X1, y, fz - Math.sqrt(Math.max(0, R * R - y * y)) * .55]);
   // twin wireframe
   if (layers.twin) {
@@ -1056,7 +1058,7 @@ function drawGhost(r) {
 function drawAGV(a) {
   const hw = a.horiz ? .62 : .4, hd = a.horiz ? .4 : .62;
   box(a.x - hw, a.y - hd, .04, a.x + hw, a.y + hd, .36, [60, 68, 80]);
-  poly([[a.x - hw, a.y - hd * .2, .361], [a.x + hw, a.y - hd * .2, .361], [a.x + hw, a.y + hd * .2, .361], [a.x - hw, a.y + hd * .2, .361]], 'rgba(230,190,40,0.85)');
+  poly([[a.x - hw, a.y - hd * .2, .361], [a.x + hw, a.y - hd * .2, .361], [a.x + hw, a.y + hd * .2, .361], [a.x - hw, a.y + hd * .2, .361]], 'rgba(196,142,18,0.85)');
   if (a.load) box(a.x - .26, a.y - .26, .36, a.x + .26, a.y + .26, .76, a.load === 'cart' ? [70, 120, 200] : [200, 84, 96]);
   const moving = a.path.length > 0;
   dot([a.x, a.y, a.load ? .9 : .5], Math.max(2, k * .09), hexA(moving ? COL.warn : COL.edge, moving && Math.sin(simT * 10) < 0 ? .3 : 1));
@@ -1098,7 +1100,7 @@ function drawTwinOverlay() {
     const S = [o.bx, o.by, 1.55]; const n = Math.ceil(pl.holes.length * Math.min(1, age / pl.dur));
     for (let i = 0; i < n; i++) { const h = holes[pl.holes[i]]; line(S, h.p); }
     g.setLineDash([]);
-    if (age < pl.dur) label(`VIRTUAL COMMISSIONING · ${Math.min(100, age / pl.dur * 100).toFixed(0)}%`, P(o.bx, o.by, 8.2), COL.accent, 10, 'rgba(9,14,18,0.85)');
+    if (age < pl.dur) label(`VIRTUAL COMMISSIONING · ${Math.min(100, age / pl.dur * 100).toFixed(0)}%`, P(o.bx, o.by, 8.2), COL.accent, 10, 'rgba(255,255,255,0.9)');
   }
 }
 function drawEdgeOverlay() {
@@ -1114,7 +1116,7 @@ function drawEdgeOverlay() {
   g.strokeStyle = hexA(COL.edge, .6); line([6.6, -9.2, 1.9], [8.45, -9.2, 2.5]);
   g.setLineDash([]);
   [3.4, 5.0, 6.6].forEach((x, i) => dot([x, -8.88, 1.65], Math.max(2, k * .08), hexA(COL.edge, .5 + .5 * Math.sin(simT * (5 + i * 2)))));
-  const p = P(gx, 0, 6.2); label(`${(latV.at(-1) || 14).toFixed(0)} ms`, [p[0], p[1] + 2], COL.edge, 9, 'rgba(9,14,18,0.8)');
+  const p = P(gx, 0, 6.2); label(`${(latV.at(-1) || 14).toFixed(0)} ms`, [p[0], p[1] + 2], COL.edge, 9, 'rgba(255,255,255,0.9)');
 }
 const agentTone = id => agentState(id).tone;
 function drawAgentOverlay() {
@@ -1130,12 +1132,12 @@ function drawAgentOverlay() {
   const rr = clamp(k * .5, 7, 12), showText = k > 13;
   for (const a of AGENTS) {
     const p = P(...agentPos(a.id)), tone = TONE[agentTone(a.id)];
-    g.fillStyle = 'rgba(9,14,18,0.9)'; g.beginPath();
+    g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath();
     for (let i = 0; i < 6; i++) { const ang = Math.PI / 6 + i * Math.PI / 3; const x = p[0] + Math.cos(ang) * rr, y = p[1] + Math.sin(ang) * rr; i ? g.lineTo(x, y) : g.moveTo(x, y); }
     g.closePath(); g.fill(); g.strokeStyle = a.id === selected ? COL.fg : hexA(COL.agent, .9); g.lineWidth = a.id === selected ? 2 : 1.2; g.stroke();
     g.fillStyle = tone; g.beginPath(); g.arc(p[0] + rr * .8, p[1] - rr * .7, 2.6, 0, 7); g.fill();
     label(a.id, p, COL.fg, rr > 9 ? 9 : 8);
-    if (showText) { const st = agentState(a.id).short; label(st, [p[0], p[1] + rr + 9], tone, 9, 'rgba(9,14,18,0.75)'); }
+    if (showText) { const st = agentState(a.id).short; label(st, [p[0], p[1] + rr + 9], tone, 9, 'rgba(255,255,255,0.85)'); }
   }
 }
 
@@ -1332,7 +1334,7 @@ function cprep(c) {
   if (c.width !== pw || c.height !== ph) { c.width = pw; c.height = ph; }
   const x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, w, h); return [x, w, h];
 }
-const MONO = '400 10px "JetBrains Mono", monospace';
+const MONO = '400 10px "IBM Plex Mono", monospace';
 function vline(x, X, y0, y1, col, dash, lw = 1) { x.setLineDash(dash); x.strokeStyle = col; x.lineWidth = lw; x.beginPath(); x.moveTo(X, y0); x.lineTo(X, y1); x.stroke(); x.setLineDash([]); }
 
 function drawHist(c, s) {
@@ -1380,7 +1382,7 @@ function drawHist(c, s) {
     x.strokeStyle = col; x.lineWidth = 1.5; x.beginPath();
     x.moveTo(a, y + 6); x.lineTo(a, y); x.lineTo(b, y); x.lineTo(b, y + 6); x.stroke();
     vline(x, X(s.mean), y - 2, y + 4, col, [], 1.5);
-    x.fillStyle = COL.fg; x.font = '500 10px "JetBrains Mono", monospace'; x.textAlign = 'center'; x.textBaseline = 'bottom';
+    x.fillStyle = COL.fg; x.font = '500 10px "IBM Plex Mono", monospace'; x.textAlign = 'center'; x.textBaseline = 'bottom';
     x.fillText(txt, clamp((a + b) / 2, L + 70, L + pw - 70), y - 3);
   };
   bracket(6, 16, fits6 ? COL.edge : COL.crit, `μ ± 6σ ${fits6 ? 'inside' : 'exceeds'} tolerance`);
@@ -1574,7 +1576,7 @@ function drawSpark(r) {
   const c = $('#spark'); if (!c) return; const w = c.clientWidth, h = c.clientHeight; c.width = w * dpr; c.height = h * dpr;
   const x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
   const max = 8, Y = v => h - 4 - v / max * (h - 8);
-  x.strokeStyle = 'rgba(120,150,170,0.12)'; x.lineWidth = 1; for (const v of [2, 4, 6]) { x.beginPath(); x.moveTo(0, Y(v)); x.lineTo(w, Y(v)); x.stroke(); }
+  x.strokeStyle = 'rgba(68,86,224,0.12)'; x.lineWidth = 1; for (const v of [2, 4, 6]) { x.beginPath(); x.moveTo(0, Y(v)); x.lineTo(w, Y(v)); x.stroke(); }
   x.setLineDash([3, 3]); x.strokeStyle = hexA(COL.crit, .7); x.beginPath(); x.moveTo(0, Y(4.3)); x.lineTo(w, Y(4.3)); x.stroke(); x.setLineDash([]);
   const d = r.vh, n = d.length, col = r.vib > 4.3 ? COL.crit : COL.edge;
   x.beginPath(); d.forEach((v, i) => { const px = i / (n - 1) * w; i ? x.lineTo(px, Y(v)) : x.moveTo(px, Y(v)); });
