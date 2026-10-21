@@ -656,6 +656,14 @@ body{overflow:auto;background:var(--bg);font-size:13px}
 .pil p{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink);flex:1}
 .pil .linkbtn{align-self:flex-start}
 @media (max-width:1180px){ .pil{grid-column:span 12} }
+
+.gpil{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gp{border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:5px;background:var(--panel-solid);padding:8px 10px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.gp b{font:600 10px var(--f-mono);letter-spacing:.12em;text-transform:uppercase}
+.gp p{margin:0;font-size:12px;line-height:1.45;color:var(--ink);flex:1}
+.gp .linkbtn{align-self:flex-start;padding:5px 9px;font-size:11.5px}
+.goal{align-items:start}
+@media (max-width:900px){ .gpil{grid-template-columns:1fr} }
 </style>
 
 <div id="app" class="layer-0">
@@ -686,22 +694,8 @@ body{overflow:auto;background:var(--bg);font-size:13px}
       <div class="gk">
         <div class="ph2"><h2>Key results · now vs target</h2><span class="pm">live · targets illustrative</span></div>
         <div class="kgrid" id="kGrid"></div>
+        <div class="gpil"><div class="gp"><b>Industrial metaverse</b><p>Enable immersive 3D visualization and cross-functional collaboration to evaluate production processes, test improvements, and accelerate decision-making.</p><button class="linkbtn" data-pil="meta">Open the metaverse view ↓</button></div><div class="gp"><b>Digital twin view</b><p>Simulate production scenarios to anticipate disruptions, eliminate waiting times, and optimize throughput. Evaluate the impact of proposed changes on lead time, quality, and resource utilization before physical implementation.</p><button class="linkbtn" data-pil="twin">Open the digital twin view ↓</button></div><div class="gp"><b>Edge AI</b><p>Leverage real-time sensor data and on-site AI processing to detect anomalies, identify bottlenecks, prevent defects, and reduce scrap, improving Right First Time (RFT) performance and overall production efficiency.</p><button class="linkbtn" data-pil="edge">Show edge AI at S41 ↓</button></div></div>
       </div>
-    </section>
-    <section class="pn s4 pil" aria-label="Industrial metaverse">
-      <div class="ph2"><h2>Industrial metaverse</h2><span class="pm">metaverse layer</span></div>
-      <p>Enable immersive 3D visualization and cross-functional collaboration to evaluate production processes, test improvements, and accelerate decision-making.</p>
-      <button class="linkbtn" data-pil="meta">Open the metaverse view ↓</button>
-    </section>
-    <section class="pn s4 pil" aria-label="Digital twin view">
-      <div class="ph2"><h2>Digital twin view</h2><span class="pm">twin layer · impact</span></div>
-      <p>Simulate production scenarios to anticipate disruptions, eliminate waiting times, and optimize throughput. Evaluate the impact of proposed changes on lead time, quality, and resource utilization before physical implementation.</p>
-      <button class="linkbtn" data-pil="twin">Open the digital twin view ↓</button>
-    </section>
-    <section class="pn s4 pil" aria-label="Edge AI">
-      <div class="ph2"><h2>Edge AI</h2><span class="pm">S41 inspection · alerts</span></div>
-      <p>Leverage real-time sensor data and on-site AI processing to detect anomalies, identify bottlenecks, prevent defects, and reduce scrap, improving Right First Time (RFT) performance and overall production efficiency.</p>
-      <button class="linkbtn" data-pil="edge">Show edge AI at S41 ↓</button>
     </section>
 
     <section class="pn s12" id="pTrace" aria-label="Line trace">
