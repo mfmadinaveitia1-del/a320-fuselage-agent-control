@@ -175,6 +175,15 @@ button { font: inherit; color: inherit; }
 .goals li { display: grid; gap: 1px; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); }
 .goals b { font: 700 11.5px var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--edge); }
 .goals span { color: var(--muted); font-size: 12px; }
+/* desktop: the 3D stage fills its card, and the side column never grows taller than the stage */
+@media (min-width: 1101px) {
+  .stage { display: flex; flex-direction: column; min-height: 860px; }
+  .stage .canvas-wrap { flex: 1 1 auto; }
+  .main .side { contain: size; overflow: hidden; display: flex; flex-direction: column; }
+  .main .side > section:nth-child(2) { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .main .side .roster { flex: 1; min-height: 0; overflow: auto; }
+  .embed .stage { min-height: 0; }
+}
 /* objective full width: goal paragraphs and goals side by side, data path underneath */
 .brief { grid-template-columns: minmax(0, 1fr); }
 .obj { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 18px; }
