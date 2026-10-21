@@ -2,7 +2,11 @@
 
 ## Goal
 
-Give the A320 fuselage line one place to see whether assembly is on track for quality, cost and delivery, and why it is not when it slips. The four KPIs that decide this are quality complaints, scrap, assembled regions against plan, and right first time. A team of AI agents watches them around the clock, spots deviations as they happen, finds likely causes and routes each issue to the right person, so the line reacts within minutes instead of at the next shift meeting.
+Provide a unified, real-time view of A320 fuselage assembly performance, ensuring production remains on track in terms of quality, cost, and delivery. The dashboard enables early identification of critical path deviations, elimination of non-value-added activities, and optimization of manufacturing processes through Lean principles, including Kanban, Just-in-Time (JIT), and Just-in-Sequence (JIS).
+
+By integrating AI Agents, Edge AI, Digital Twins, Industrial Metaverse, and Cloud technologies, the solution enables proactive detection and prediction of supply chain, quality, and production disruptions. This supports faster, data-driven decision-making, minimizes downtime, reduces scrap and rework, and improves right-first-time performance, contributing to the production target of 100 aircraft per month.
+
+The dashboard also provides end-to-end visibility into multi-agent orchestration, illustrating how specialized AI agents collaborate, exchange information, coordinate decisions, and execute complex, multi-step workflows as a unified, goal-driven system. This transparency enables stakeholders to monitor agent activities, understand automated decisions, track issue resolution, and maintain human oversight of critical manufacturing operations.
 
 **Who it is for:** shift and line leads, quality engineers, production planners and the project team responsible for fuselage assembly.
 

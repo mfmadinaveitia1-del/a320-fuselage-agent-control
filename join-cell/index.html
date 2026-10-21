@@ -175,6 +175,13 @@ button { font: inherit; color: inherit; }
 .goals li { display: grid; gap: 1px; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg); }
 .goals b { font: 700 11.5px var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--edge); }
 .goals span { color: var(--muted); font-size: 12px; }
+/* objective full width: goal paragraphs and goals side by side, data path underneath */
+.brief { grid-template-columns: minmax(0, 1fr); }
+.obj { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 18px; }
+.obj p.lead { max-width: none; font-size: 13px; line-height: 1.55; }
+.obj .goals { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.obj > p:not(.lead) { grid-column: 1 / -1; max-width: none; }
+@media (max-width: 900px) { .obj, .obj .goals { grid-template-columns: minmax(0, 1fr); } }
 .flow { padding: 14px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px; }
 .fstep { position: relative; min-width: 0; display: grid; gap: 6px; align-content: start; padding: 10px; background: var(--bg); border: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: var(--r); }
 .fstep:not(.loop):not(:nth-child(5))::after { content: "→"; position: absolute; right: -18px; top: 38%; color: var(--muted); font: 15px var(--font-mono); }
@@ -378,7 +385,9 @@ button { font: inherit; color: inherit; }
     <div class="panel">
       <div class="panel-h">Dashboard objective <span class="count">why this screen exists</span></div>
       <div class="obj">
-        <p class="lead">One shared, live view of join cell 07 for the shift lead, manufacturing engineering, quality and maintenance. Its job is to get every fuselage section out of the cell on takt with zero quality escapes, and to show each risk early enough to act before it stops the line.</p>
+        <p class="lead">Provide a unified, real-time view of A320 fuselage assembly performance, ensuring production remains on track in terms of quality, cost, and delivery. The dashboard enables early identification of critical path deviations, elimination of non-value-added activities, and optimization of manufacturing processes through Lean principles, including Kanban, Just-in-Time (JIT), and Just-in-Sequence (JIS).</p>
+        <p class="lead">By integrating AI Agents, Edge AI, Digital Twins, Industrial Metaverse, and Cloud technologies, the solution enables proactive detection and prediction of supply chain, quality, and production disruptions. This supports faster, data-driven decision-making, minimizes downtime, reduces scrap and rework, and improves right-first-time performance, contributing to the production target of 100 aircraft per month.</p>
+        <p class="lead">The dashboard also provides end-to-end visibility into multi-agent orchestration, illustrating how specialized AI agents collaborate, exchange information, coordinate decisions, and execute complex, multi-step workflows as a unified, goal-driven system. This transparency enables stakeholders to monitor agent activities, understand automated decisions, track issue resolution, and maintain human oversight of critical manufacturing operations.</p>
         <ul class="goals">
           <li><b>Deliver on takt</b><span>Each shipset closes inside its 70 s cycle plan (time-scaled for the simulation).</span></li>
           <li><b>Zero escapes</b><span>Edge vision inspects every fastener before the section moves on.</span></li>
