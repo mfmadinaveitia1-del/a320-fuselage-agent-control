@@ -642,6 +642,13 @@ body{overflow:auto;background:var(--bg);font-size:13px}
 @media (max-width:1180px){ .goal{grid-template-columns:1fr} .gl{border-right:0;padding-right:0;border-bottom:1px solid var(--line);padding-bottom:12px} .kgrid{grid-template-columns:repeat(2,minmax(0,1fr))} }
 
 #gantt svg{max-width:980px}
+
+.wakei,.fsb{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:5px 9px;font:500 11px var(--f-mono);letter-spacing:.04em;color:var(--ink);white-space:nowrap}
+.fsb{padding:5px 7px} .fsb svg{width:14px;height:14px}
+.wakei i{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.wakei.on i{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.wakei.wait i{background:var(--warn)}
+.wakei.off{color:var(--muted)}
 </style>
 
 <div id="app" class="layer-0">
@@ -654,6 +661,8 @@ body{overflow:auto;background:var(--bg);font-size:13px}
       <span class="synth" title="All figures in this dashboard are synthetic">SYNTHETIC DATA</span>
       <span class="proj">A320 FAMILY · FINAL ASSEMBLY LINE</span>
       <span class="livei" id="liveI"><i></i><span id="clock">Day 0.0</span></span>
+      <button class="wakei" id="wakeI" aria-pressed="true" title="Keep the screen from sleeping while this page is open"><i></i><span id="wakeT">Screen: starting…</span></button>
+      <button class="fsb" id="bFull" title="Fullscreen (F)" aria-label="Fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <span class="play"><button id="bPlay">Pause</button><button id="bSpeed">Speed 1×</button><button id="bReset">Reset</button></span>
     </div>
   </header>
@@ -2280,17 +2289,43 @@ function frame(now){
 }
 
 /* keep the display awake for kiosk / wall-screen use, and recover from GPU resets */
-let wakeLock=null, wantAwake=true;
-function updateWakeUI(){ const b=$('#bWake'); if(!b) return; b.setAttribute('aria-pressed',wantAwake);
-  b.textContent=!wantAwake?'Keep screen awake: off':wakeLock?'Keep screen awake: on':('wakeLock' in navigator)?'Keep screen awake: waiting for focus':'Keep screen awake: not supported by this browser'; }
-async function requestWake(){ if(!wantAwake||wakeLock||!('wakeLock' in navigator)||document.visibilityState!=='visible'){ updateWakeUI(); return; }
-  try{ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{ wakeLock=null; updateWakeUI(); if(wantAwake) setTimeout(requestWake,1000); }); }catch(_){ wakeLock=null; }
+let wakeLock=null, wantAwake=true, fbOn=false;
+try{ const v=localStorage.getItem('falTwinAwake'); if(v==='0') wantAwake=false; }catch(_){}
+/* fallback for browsers without (or refusing) the Wake Lock API: a tiny silent looping video keeps the display on */
+const NS=document.createElement('video'); NS.muted=true; NS.loop=true; NS.playsInline=true;
+['muted','playsinline','webkit-playsinline','loop'].forEach(a=>NS.setAttribute(a,''));
+NS.setAttribute('aria-hidden','true'); NS.tabIndex=-1;
+NS.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1';
+NS.innerHTML='<source src="data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAOYEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggOC7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECvQAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYjp+J22yUiZWZyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBELqBEJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYjp+J22yUiZWWfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDQuMDAwMDAwMDAwAB9DtnVB3eeBAKOjgQAAgBACAJ0BKhAAEAAARwiFhYiFhIgCAgAMDWAA/v+rUICjlYEAyACxAQABEBAAGAAYWC/0AAgAAKOVgQGQALEBAAEQEAAYABhYL/QACAAAo5WBAlgAsQEAARAQABgAGFgv9AAIAACjlYEDIACxAQABEBAAGAAYWC/0AAgAAKOVgQPoALEBAAEQEAAYABhYL/QACAAAo5WBBLAAsQEAARAQABgAGFgv9AAIAACjlYEFeACxAQABEBAUYABhYL/QACAAAKOVgQZAALEBAAEQEAAYABhYL/QACAAAo5WBBwgAsQEAARAQABgAGFgv9AAIAACjlYEH0ACxAQABEBAAGAAYWC/0AAgAAKOVgQiYALEBAAEQEAAYABhYL/QACAAAo5WBCWAAsQEAARAQABgAGFgv9AAIAACjlYEKKACxAQABEBAAGAAYWC/0AAgAAKOVgQrwALEBAAEQEAAYABhYL/QACAAAo5WBC7gAsQEAARAQABgAGFgv9AAIAACjlYEMgACxAQABEBAAGAAYWC/0AAgAAKOVgQ1IALEBAAEQEAAYABhYL/QACAAAo5WBDhAAsQEAARAQFGAAYWC/0AAgAACjlYEO2ACxAQABEBAAGAAYWC/0AAgAABxTu2uRu4+zgQC3iveBAfGCAZ/wgQM=" type="video/webm"><source src="data:video/mp4;base64,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" type="video/mp4">';
+document.body.appendChild(NS);
+function startFallback(){ if(!wantAwake||fbOn) return; const p=NS.play(); if(p&&p.then) p.then(()=>{ fbOn=true; updateWakeUI(); }).catch(()=>updateWakeUI()); }
+function stopFallback(){ if(fbOn){ NS.pause(); fbOn=false; } }
+function updateWakeUI(){ const st=!wantAwake?['off','Screen: may sleep']:wakeLock?['on','Screen: kept awake']:fbOn?['on','Screen: kept awake · fallback']:['wait','Screen: tap once to keep awake'];
+  const w=$('#wakeI'); if(w){ w.className='wakei '+st[0]; w.setAttribute('aria-pressed',String(wantAwake)); $('#wakeT').textContent=st[1]; }
+  const b=$('#bWake'); if(b){ b.setAttribute('aria-pressed',wantAwake); b.textContent='Keep screen awake: '+(!wantAwake?'off':wakeLock||fbOn?'on':'waiting for a tap'); } }
+async function requestWake(){
+  if(!wantAwake){ stopFallback(); updateWakeUI(); return; }
+  if(wakeLock||document.visibilityState!=='visible'){ updateWakeUI(); return; }
+  if('wakeLock' in navigator){
+    try{ wakeLock=await navigator.wakeLock.request('screen'); stopFallback();
+      wakeLock.addEventListener('release',()=>{ wakeLock=null; updateWakeUI(); if(wantAwake) setTimeout(requestWake,800); }); }
+    catch(_){ wakeLock=null; startFallback(); }
+  } else startFallback();
   updateWakeUI(); }
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ last=performance.now(); requestWake(); } });
-['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>{ if(!wakeLock) requestWake(); },{passive:true}));
-setInterval(()=>{ if(!wakeLock) requestWake(); },30000);
-$('#bWake').addEventListener('click',()=>{ wantAwake=!wantAwake; if(!wantAwake&&wakeLock){ const l=wakeLock; wakeLock=null; l.release().catch(()=>{}); } requestWake(); toast(wantAwake?'The screen will stay on while this page is open.':'The screen can sleep again.'); });
+function setAwake(v){ wantAwake=v; try{ localStorage.setItem('falTwinAwake',v?'1':'0'); }catch(_){}
+  if(!v){ if(wakeLock){ const l=wakeLock; wakeLock=null; l.release().catch(()=>{}); } stopFallback(); }
+  requestWake(); toast(v?'The screen will stay on while this page is open.':'The screen can sleep again.'); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ last=performance.now(); requestWake(); if(fbOn) NS.play().catch(()=>{}); } });
+addEventListener('focus',()=>requestWake());
+document.addEventListener('fullscreenchange',()=>requestWake());
+['pointerdown','keydown','touchend','click'].forEach(ev=>addEventListener(ev,()=>{ if(!wakeLock&&!fbOn) requestWake(); },{passive:true}));
+setInterval(()=>{ if(!wakeLock) requestWake(); if(fbOn&&NS.paused) NS.play().catch(()=>{ fbOn=false; updateWakeUI(); }); },20000);
+$('#bWake').addEventListener('click',()=>setAwake(!wantAwake));
+$('#wakeI').addEventListener('click',()=>setAwake(!wantAwake));
+function toggleFull(){ const d=document; if(!d.fullscreenElement){ (d.documentElement.requestFullscreen||d.documentElement.webkitRequestFullscreen||(()=>{})).call(d.documentElement); } else (d.exitFullscreen||d.webkitExitFullscreen).call(d); }
+$('#bFull').addEventListener('click',toggleFull);
 canvas.addEventListener('webglcontextlost',e=>{ e.preventDefault(); setTimeout(()=>location.reload(),1500); });
+addEventListener('keydown',e=>{ if((e.key==='f'||e.key==='F')&&!(e.target.closest&&e.target.closest('input,textarea'))) toggleFull(); });
 requestWake();
 
 newSim(); CP=cpm(LIVE); updateFeederTags(); syncControls(); resize(); renderGantt(); renderYZ();
