@@ -23,6 +23,10 @@ The **Agent orchestration** section shows how the agents work together: orchestr
 
 All figures are **simulated sample data**. The assistant answers are rule-based from that data. Single static `index.html`, no build step.
 
+## Join cell twin
+
+The **Join cell 07** section embeds the robot-cell digital twin from [ai-risk-benchmark/fuselage-join-twin](https://github.com/mfmadinaveitia1-del/ai-risk-benchmark/tree/main/fuselage-join-twin): six riveting robots, a vision gantry, two AGVs and 11 agents on the section 15/21 join. A copy lives in `join-cell/index.html`; opened with `?embed=1` it shows only the cell, the inspector and the agent list, and the dashboard sizes the frame to it. Open `join-cell/` on its own for the full twin with KRIs, CTQ capability and the event trace.
+
 ## Wall-display mode
 
 The page keeps the screen awake with the Screen Wake Lock API (Chrome, Edge, Safari 16.4+, Firefox 126+), re-acquires it when the tab becomes visible again, and shows the status in the top bar. The simulation rolls over from shift to shift (A 06:00, B 14:00, C 22:00) so it runs indefinitely.

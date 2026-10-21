@@ -301,6 +301,12 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
 @media (max-width: 1080px) { .about-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (max-width: 520px) { .about-grid { grid-template-columns: minmax(0,1fr); } }
 
+/* Join cell twin */
+#join-cell { scroll-margin-top: 16px; }
+#join-cell .sub-h a.btn { text-decoration: none; color: var(--fg); }
+.twin-frame { border-radius: 12px; overflow: hidden; background: #080d12; border: 1px solid var(--line); }
+.twin-frame iframe { display: block; width: 100%; height: 820px; border: 0; }
+
 /* Dialog */
 .modal[hidden], .toast[hidden] { display: none; }
 .modal { position: fixed; inset: 0; background: rgba(13,17,32,.45); display: grid; place-items: center; padding: 16px; z-index: 50; }
@@ -354,6 +360,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
       <li><a href="#scrap-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Scrap</a></li>
       <li><a href="#fus-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="9" width="20" height="6" rx="3"/><path d="M8 9v6M13 9v6"/></svg>Assembly</a></li>
       <li><a href="#rft-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg>Right first time</a></li>
+      <li><a href="#join-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>Join cell twin</a></li>
       <li><a href="#orch-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="5" r="2"/><circle cx="20" cy="5" r="2"/><circle cx="12" cy="21" r="2"/><path d="M6 6l4 4M18 6l-4 4M12 15v4"/></svg>Orchestration</a></li>
     </ul>
     <div class="grow"></div>
@@ -404,6 +411,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
         <div><h3>How to read it</h3><ul>
           <li><b>Top:</b> the four KPIs against the previous 7 days and their targets</li>
           <li><b>Middle:</b> where the problems sit: defect mix, fuselage sections, scrap drivers, stations</li>
+          <li><b>Join cell twin:</b> the robot agents riveting the section 15/21 join, live in 3D</li>
           <li><b>Bottom:</b> agent orchestration, showing how the agents share and hand over the work</li>
           <li><b>Right:</b> ask the line assistant for causes, held sections or a handover</li></ul></div>
         <div><h3>What it should achieve</h3><ul>
@@ -480,6 +488,15 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
         <ul class="feed" id="feed"></ul>
       </section>
     </div>
+
+    <section class="sub card" id="join-cell">
+      <div class="sub-h">
+        <div><h2>Join cell 07 · robot agents in the industrial metaverse</h2><p>Live digital twin of the section 15/21 join: six riveting robots, a vision gantry, two AGVs and 11 agents. Select a robot or agent to inspect it.</p></div>
+        <a class="btn sm" href="join-cell/" target="_blank" rel="noopener">Open full twin ↗</a>
+      </div>
+      <div class="twin-frame"><iframe id="twinFrame" src="join-cell/?embed=1" title="Join cell 07 digital twin with robot agents" loading="lazy"></iframe></div>
+      <p class="foot-note">Concept simulation with synthetic data, from the Fuselage Join Twin. Its cell agents run on their own clock, separate from the line agents above.</p>
+    </section>
 
     <section class="orch" id="orch-card" aria-labelledby="orchTitle">
       <div class="orch-h">
@@ -1225,6 +1242,17 @@ try { if (localStorage.getItem('aboutClosed') === '1') $('#about').open = false;
 const syncAbout = () => { $('#aboutToggle').textContent = $('#about').open ? 'Hide' : 'Show'; };
 $('#about').addEventListener('toggle', () => { syncAbout(); try { localStorage.setItem('aboutClosed', $('#about').open ? '0' : '1'); } catch (e) {} });
 syncAbout();
+
+/* ---------- Join cell twin: size the frame to its content ---------- */
+const twinFrame = $('#twinFrame');
+function fitTwin() {
+  try { const m = twinFrame.contentDocument && twinFrame.contentDocument.querySelector('.main'); if (m) { const h = Math.ceil(m.getBoundingClientRect().height); if (h > 200) twinFrame.style.height = h + 'px'; } } catch (e) {}
+}
+twinFrame.addEventListener('load', () => {
+  fitTwin();
+  try { new ResizeObserver(fitTwin).observe(twinFrame.contentDocument.querySelector('.main')); } catch (e) {}
+});
+window.addEventListener('resize', fitTwin);
 
 /* ---------- Keep the screen awake (wall-display mode) ---------- */
 let wakeLock = null;
