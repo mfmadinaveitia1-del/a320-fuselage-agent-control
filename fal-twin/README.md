@@ -2,7 +2,9 @@
 
 Interactive concept of a digital twin for an A320 Family final assembly line (FAL), from section delivery (S50) to the flight line.
 
-**Goal:** achieve 100 A320 aircraft per month by improving final assembly efficiency, ensuring on-time delivery, minimizing quality complaints and scrap, and reducing rework. The dashboard provides real-time production visibility, identifies bottlenecks, detects quality issues, and enables data-driven decision-making.
+**Goal:** achieve a production rate of 100 aircraft per month by optimizing end-to-end manufacturing operations, identifying the critical path, eliminating non-value-added activities, and implementing Lean Manufacturing principles, including Kanban, Just-in-Time (JIT), and Just-in-Sequence (JIS), across all assembly stages.
+
+Leverage Edge AI, Digital Twins, Industrial Metaverse, and Cloud technologies to enable real-time monitoring, predictive analysis, and early detection of supply chain, quality, and production disruptions. Provide stakeholders with actionable insights and timely alerts to accelerate decision-making, minimize downtime, reduce scrap and rework, and improve overall production efficiency.
 
 - **Industrial metaverse:** immersive 3D visualization and cross-functional collaboration to evaluate production processes, test improvements and accelerate decision-making.
 - **Digital twin view:** simulate production scenarios to anticipate disruptions, eliminate waiting times and optimize throughput; evaluate the impact of changes on lead time, quality and resource utilization before physical implementation.
