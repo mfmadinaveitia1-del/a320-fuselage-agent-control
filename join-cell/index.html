@@ -874,7 +874,8 @@ function injectFault(id, scripted) {
 function vibUpdate(r, dt) {
   const ramp = r.fault ? Math.min(1, (simT - r.faultT) / 7) : 0;
   const target = 1.15 + ramp * 6 + (r.phase === 'drill' ? .35 : 0);
-  r.vib += (target - r.vib) * Math.min(1, dt * 1.6) + (Math.random() - .5) * .12 * Math.sqrt(dt * 60) * .4;
+  r.vib += (target - r.vib) * Math.min(1, dt * 1.6) + (Math.random() - .5) * .12 * Math.sqrt(Math.max(0, dt) * 60) * .4;
+  if (!Number.isFinite(r.vib)) r.vib = target;
   if (r.vib > 4.3 && !r.flagged && r.status === 'active') {
     r.flagged = true; r.detT = simT;
     log('PDM', 'ANOMALY', `EDGE-02 · ${r.id} spindle ${r.vib.toFixed(1)} mm/s RMS (limit 4.3) · bearing wear p=0.93 · inference ${latP.toFixed(0)} ms`, 'crit');
@@ -1608,7 +1609,7 @@ cv.addEventListener('click', e => {
 /* ───────── loop ───────── */
 let last = performance.now(), uiAcc = 0;
 function frame(now) {
-  const real = Math.min(.1, (now - last) / 1000); last = now;
+  const real = Math.max(0, Math.min(.1, (now - last) / 1000)); last = now;
   if (running && W) { const sub = speed; for (let i = 0; i < sub; i++) step(real); }
   if (W) render();
   uiAcc += real; if (uiAcc > .2) { uiAcc = 0; updateUI(); }
