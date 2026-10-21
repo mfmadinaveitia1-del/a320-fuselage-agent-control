@@ -2,7 +2,11 @@
 
 Interactive concept of a digital twin for an A320 Family final assembly line (FAL), from section delivery (S50) to the flight line.
 
-**Goal:** make final assembly more efficient. Reach takt, deliver every aircraft within its committed lead time, and remove rework and travelled work at the source, by showing where time is lost and testing each fix before it reaches the shop floor.
+**Goal:** achieve 100 A320 aircraft per month by improving final assembly efficiency, ensuring on-time delivery, minimizing quality complaints and scrap, and reducing rework. The dashboard provides real-time production visibility, identifies bottlenecks, detects quality issues, and enables data-driven decision-making.
+
+- **Industrial metaverse:** immersive 3D visualization and cross-functional collaboration to evaluate production processes, test improvements and accelerate decision-making.
+- **Digital twin view:** simulate production scenarios to anticipate disruptions, eliminate waiting times and optimize throughput; evaluate the impact of changes on lead time, quality and resource utilization before physical implementation.
+- **Edge AI:** real-time sensor data and on-site AI processing to detect anomalies, identify bottlenecks, prevent defects and reduce scrap, improving Right First Time (RFT).
 
 **Live demo:** https://mfmadinaveitia1-del.github.io/a320-fuselage-agent-control/fal-twin/
 

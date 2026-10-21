@@ -649,6 +649,13 @@ body{overflow:auto;background:var(--bg);font-size:13px}
 .wakei.on i{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
 .wakei.wait i{background:var(--warn)}
 .wakei.off{color:var(--muted)}
+
+.gsub{margin:0;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.gnote{margin:0;font-size:10px;color:var(--muted);line-height:1.4}
+.pil{border-top:3px solid var(--accent)}
+.pil p{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink);flex:1}
+.pil .linkbtn{align-self:flex-start}
+@media (max-width:1180px){ .pil{grid-column:span 12} }
 </style>
 
 <div id="app" class="layer-0">
@@ -671,7 +678,9 @@ body{overflow:auto;background:var(--bg);font-size:13px}
     <section class="pn s12 goal" id="pGoal" aria-label="Goal and key results">
       <div class="gl">
         <div class="ph2"><h2>Goal</h2><span class="pm">why this twin exists</span></div>
-        <p class="gtxt">Make A320 final assembly <b>more efficient</b>: reach takt at <b id="gRate">10.5</b> aircraft per month, deliver every aircraft within its <b>committed lead time</b>, and remove rework and travelled work at the source. The twin shows where time is lost and tests each fix before it reaches the shop floor.</p>
+        <p class="gtxt">Achieve <b>100 A320 aircraft per month</b> by improving final assembly efficiency, ensuring <b>on-time delivery</b>, minimizing quality complaints and scrap, and <b>reducing rework</b>.</p>
+        <p class="gsub">The dashboard provides real-time production visibility, identifies bottlenecks, detects quality issues, and enables data-driven decision-making.</p>
+        <p class="gnote mono">100/mo is the programme rate across all lines; this modelled line's share is <span id="gRate">10.5</span>/mo at the selected takt.</p>
         <div class="gscore"><span class="px" id="gPx" aria-hidden="true"></span><div><b id="gOn">–</b><small id="gOnS">KPIs on target</small></div></div>
       </div>
       <div class="gk">
@@ -679,6 +688,22 @@ body{overflow:auto;background:var(--bg);font-size:13px}
         <div class="kgrid" id="kGrid"></div>
       </div>
     </section>
+    <section class="pn s4 pil" aria-label="Industrial metaverse">
+      <div class="ph2"><h2>Industrial metaverse</h2><span class="pm">metaverse layer</span></div>
+      <p>Enable immersive 3D visualization and cross-functional collaboration to evaluate production processes, test improvements, and accelerate decision-making.</p>
+      <button class="linkbtn" data-pil="meta">Open the metaverse view ↓</button>
+    </section>
+    <section class="pn s4 pil" aria-label="Digital twin view">
+      <div class="ph2"><h2>Digital twin view</h2><span class="pm">twin layer · impact</span></div>
+      <p>Simulate production scenarios to anticipate disruptions, eliminate waiting times, and optimize throughput. Evaluate the impact of proposed changes on lead time, quality, and resource utilization before physical implementation.</p>
+      <button class="linkbtn" data-pil="twin">Open the digital twin view ↓</button>
+    </section>
+    <section class="pn s4 pil" aria-label="Edge AI">
+      <div class="ph2"><h2>Edge AI</h2><span class="pm">S41 inspection · alerts</span></div>
+      <p>Leverage real-time sensor data and on-site AI processing to detect anomalies, identify bottlenecks, prevent defects, and reduce scrap, improving Right First Time (RFT) performance and overall production efficiency.</p>
+      <button class="linkbtn" data-pil="edge">Show edge AI at S41 ↓</button>
+    </section>
+
     <section class="pn s12" id="pTrace" aria-label="Line trace">
       <div class="ph2"><h2>Line trace · sections in → aircraft out</h2><span class="pm" id="trMeta"></span></div>
       <div id="trace"></div>
@@ -2245,6 +2270,12 @@ function renderGoal(){
   $('#gOnS').textContent=off.length?`KPIs on target · off: ${off.slice(0,3).join(', ')}`:'KPIs on target';
   $('#gRate').textContent=f1(tgt);
 }
+
+/* pillar buttons */
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-pil]'); if(!b) return; const k=b.dataset.pil;
+  if(k==='meta') $('#lay2').click(); else if(k==='twin') $('#lay1').click();
+  else { if(!LIVE.lev.ai){ LIVE.lev.ai=true; onConfigChange('Edge-AI hole inspection at S41: on.'); } go(stepIdx('s41')); }
+  jumpTo('pStage'); });
 /* ======================= LOOP ======================= */
 let chevOff=0, hudT=0, last=performance.now(), clock=0, agvClock=0;
 function colorChevrons(){
