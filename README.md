@@ -26,3 +26,7 @@ All figures are **simulated sample data**. The assistant answers are rule-based 
 ## Wall-display mode
 
 The page keeps the screen awake with the Screen Wake Lock API (Chrome, Edge, Safari 16.4+, Firefox 126+), re-acquires it when the tab becomes visible again, and shows the status in the top bar. The simulation rolls over from shift to shift (A 06:00, B 14:00, C 22:00) so it runs indefinitely.
+
+## A320 FAL Digital Twin
+
+The folder [`fal-twin/`](fal-twin/) holds a second prototype: an interactive digital twin of the A320 Family final assembly line (S50 to flight line) in a "decision trace" layout. It shows the goal and key results, a 3D line view, critical path, takt margins, alerts with a rule-based assistant, rush-order planning and power load balancing. Open `fal-twin/index.html`, or the Pages site at `/fal-twin/`. All data is synthetic.
