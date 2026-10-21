@@ -336,6 +336,7 @@ button { font: inherit; color: inherit; }
 .embed .app > :not(.main) { display: none !important; }
 .embed .app { padding: 0 !important; max-width: none; }
 .embed body { background: transparent; }
+#awake[data-on="false"] i { background: var(--faint); box-shadow: none; animation: none; }
 .embed .side > section:nth-child(3) { display: none; }
 @media (min-width: 760px) {
   .embed .main { grid-template-columns: minmax(0, 1fr) 320px; align-items: stretch; }
@@ -361,6 +362,7 @@ button { font: inherit; color: inherit; }
       </div>
     </div>
     <span class="pill-mode"><i></i><span>Twin live · 50 Hz</span></span>
+    <span class="pill-mode" id="awake" data-on="false" title="Keeps the display from sleeping while this page is open"><i></i><span>Checking screen…</span></span>
     <div class="metrics" aria-live="polite">
       <div class="metric"><b id="kShip">#1</b><span>Shipset</span></div>
       <div class="metric"><b><span id="kDone">0</span><em>/<span id="kTotal">0</span></em></b><span>Fasteners</span></div>
@@ -1620,6 +1622,44 @@ reset();
 new ResizeObserver(fit).observe(wrap);
 fit(); updateUI();
 requestAnimationFrame(frame);
+})();
+</script>
+<script>
+/* Keep the screen awake when the twin runs on its own (embedded, the dashboard holds the lock) */
+if (!document.documentElement.classList.contains('embed')) (() => {
+  const ui = document.getElementById('awake');
+  let lock = null, fb = false;
+  const v = document.createElement('video');
+  v.muted = true; v.loop = true; v.playsInline = true;
+  ['muted', 'playsinline', 'webkit-playsinline', 'loop'].forEach(a => v.setAttribute(a, ''));
+  v.setAttribute('aria-hidden', 'true'); v.tabIndex = -1;
+  v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1';
+  v.src = 'data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAOYEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggOC7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECvQAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYjp+J22yUiZWZyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBELqBEJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYjp+J22yUiZWWfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDQuMDAwMDAwMDAwAB9DtnVB3eeBAKOjgQAAgBACAJ0BKhAAEAAARwiFhYiFhIgCAgAMDWAA/v+rUICjlYEAyACxAQABEBAAGAAYWC/0AAgAAKOVgQGQALEBAAEQEAAYABhYL/QACAAAo5WBAlgAsQEAARAQABgAGFgv9AAIAACjlYEDIACxAQABEBAAGAAYWC/0AAgAAKOVgQPoALEBAAEQEAAYABhYL/QACAAAo5WBBLAAsQEAARAQABgAGFgv9AAIAACjlYEFeACxAQABEBAUYABhYL/QACAAAKOVgQZAALEBAAEQEAAYABhYL/QACAAAo5WBBwgAsQEAARAQABgAGFgv9AAIAACjlYEH0ACxAQABEBAAGAAYWC/0AAgAAKOVgQiYALEBAAEQEAAYABhYL/QACAAAo5WBCWAAsQEAARAQABgAGFgv9AAIAACjlYEKKACxAQABEBAAGAAYWC/0AAgAAKOVgQrwALEBAAEQEAAYABhYL/QACAAAo5WBC7gAsQEAARAQABgAGFgv9AAIAACjlYEMgACxAQABEBAAGAAYWC/0AAgAAKOVgQ1IALEBAAEQEAAYABhYL/QACAAAo5WBDhAAsQEAARAQFGAAYWC/0AAgAACjlYEO2ACxAQABEBAAGAAYWC/0AAgAABxTu2uRu4+zgQC3iveBAfGCAZ/wgQM=';
+  document.body.appendChild(v);
+  const show = () => {
+    if (!ui) return;
+    ui.dataset.on = String(!!lock || fb);
+    const t = ui.querySelector('span');
+    if (t) t.textContent = lock ? 'Screen stays on' : fb ? 'Screen stays on (fallback)' : 'Click the page to keep the screen on';
+  };
+  const startFb = () => { if (fb) return; const p = v.play(); if (p && p.then) p.then(() => { fb = true; show(); }).catch(show); };
+  async function req() {
+    if (lock || document.visibilityState !== 'visible') return show();
+    if ('wakeLock' in navigator) {
+      try {
+        lock = await navigator.wakeLock.request('screen');
+        if (fb) { v.pause(); fb = false; }
+        lock.addEventListener('release', () => { lock = null; show(); setTimeout(req, 800); });
+      } catch (e) { lock = null; startFb(); }
+    } else startFb();
+    show();
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { req(); if (fb) v.play().catch(() => {}); } });
+  addEventListener('focus', req);
+  document.addEventListener('fullscreenchange', req);
+  ['pointerdown', 'keydown', 'touchend', 'click'].forEach(ev => addEventListener(ev, () => { if (!lock && !fb) req(); }, { passive: true }));
+  setInterval(() => { if (!lock) req(); if (fb && v.paused) v.play().catch(() => { fb = false; show(); }); }, 20000);
+  req();
 })();
 </script>
 

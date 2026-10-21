@@ -1254,22 +1254,42 @@ twinFrame.addEventListener('load', () => {
 });
 window.addEventListener('resize', fitTwin);
 
-/* ---------- Keep the screen awake (wall-display mode) ---------- */
-let wakeLock = null;
-function setAwake(on, txt) { const el = $('#awake'); el.dataset.on = on; el.querySelector('span').textContent = txt; }
-async function keepAwake() {
-  if (!('wakeLock' in navigator)) { setAwake(false, 'Screen may sleep (no wake lock in this browser)'); return; }
-  if (document.visibilityState !== 'visible' || (wakeLock && !wakeLock.released)) return;
-  try {
-    wakeLock = await navigator.wakeLock.request('screen');
-    setAwake(true, 'Screen stays on');
-    wakeLock.addEventListener('release', () => setAwake(false, 'Screen may sleep'));
-  } catch (err) { setAwake(false, 'Click the page to keep the screen on'); }
-}
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
-document.addEventListener('click', keepAwake);
-setInterval(keepAwake, 60000);
-keepAwake();
+/* ---------- Keep the screen awake (wall-display mode): wake lock, re-acquired; silent video fallback ---------- */
+(() => {
+  const ui = document.getElementById('awake');
+  let lock = null, fb = false;
+  const v = document.createElement('video');
+  v.muted = true; v.loop = true; v.playsInline = true;
+  ['muted', 'playsinline', 'webkit-playsinline', 'loop'].forEach(a => v.setAttribute(a, ''));
+  v.setAttribute('aria-hidden', 'true'); v.tabIndex = -1;
+  v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1';
+  v.src = 'data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAOYEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggOC7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECvQAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYjp+J22yUiZWZyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBELqBEJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYjp+J22yUiZWWfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDQuMDAwMDAwMDAwAB9DtnVB3eeBAKOjgQAAgBACAJ0BKhAAEAAARwiFhYiFhIgCAgAMDWAA/v+rUICjlYEAyACxAQABEBAAGAAYWC/0AAgAAKOVgQGQALEBAAEQEAAYABhYL/QACAAAo5WBAlgAsQEAARAQABgAGFgv9AAIAACjlYEDIACxAQABEBAAGAAYWC/0AAgAAKOVgQPoALEBAAEQEAAYABhYL/QACAAAo5WBBLAAsQEAARAQABgAGFgv9AAIAACjlYEFeACxAQABEBAUYABhYL/QACAAAKOVgQZAALEBAAEQEAAYABhYL/QACAAAo5WBBwgAsQEAARAQABgAGFgv9AAIAACjlYEH0ACxAQABEBAAGAAYWC/0AAgAAKOVgQiYALEBAAEQEAAYABhYL/QACAAAo5WBCWAAsQEAARAQABgAGFgv9AAIAACjlYEKKACxAQABEBAAGAAYWC/0AAgAAKOVgQrwALEBAAEQEAAYABhYL/QACAAAo5WBC7gAsQEAARAQABgAGFgv9AAIAACjlYEMgACxAQABEBAAGAAYWC/0AAgAAKOVgQ1IALEBAAEQEAAYABhYL/QACAAAo5WBDhAAsQEAARAQFGAAYWC/0AAgAACjlYEO2ACxAQABEBAAGAAYWC/0AAgAABxTu2uRu4+zgQC3iveBAfGCAZ/wgQM=';
+  document.body.appendChild(v);
+  const show = () => {
+    if (!ui) return;
+    ui.dataset.on = String(!!lock || fb);
+    const t = ui.querySelector('span');
+    if (t) t.textContent = lock ? 'Screen stays on' : fb ? 'Screen stays on (fallback)' : 'Click the page to keep the screen on';
+  };
+  const startFb = () => { if (fb) return; const p = v.play(); if (p && p.then) p.then(() => { fb = true; show(); }).catch(show); };
+  async function req() {
+    if (lock || document.visibilityState !== 'visible') return show();
+    if ('wakeLock' in navigator) {
+      try {
+        lock = await navigator.wakeLock.request('screen');
+        if (fb) { v.pause(); fb = false; }
+        lock.addEventListener('release', () => { lock = null; show(); setTimeout(req, 800); });
+      } catch (e) { lock = null; startFb(); }
+    } else startFb();
+    show();
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { req(); if (fb) v.play().catch(() => {}); } });
+  addEventListener('focus', req);
+  document.addEventListener('fullscreenchange', req);
+  ['pointerdown', 'keydown', 'touchend', 'click'].forEach(ev => addEventListener(ev, () => { if (!lock && !fb) req(); }, { passive: true }));
+  setInterval(() => { if (!lock) req(); if (fb && v.paused) v.play().catch(() => { fb = false; show(); }); }, 20000);
+  req();
+})();
 $('#shiftPct').textContent = Math.round(nowMin / 480 * 100); $('#shiftBar').style.width = (nowMin / 480 * 100).toFixed(1) + '%';
 start();
 })();
