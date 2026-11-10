@@ -20,6 +20,11 @@ Leverage Edge AI, Digital Twins, Industrial Metaverse, and Cloud technologies to
 - **Alerts & predictive maintenance:** bottlenecks, engine shortage, late aircraft, robot vibration, paint-booth humidity and power-peak forecasts.
 - **Orders and rush-order planning,** fleet search, line balancing (yamazumi), critical path (CPM) and an impact report that re-simulates 200 days × 3 seeds.
 
+- **Site view** of the whole plant with open process halls, weather, time of day and a guided tour.
+- **Daylight rendering:** sky-lit line view with clouds, water, contact shadows and customer liveries; cinematic 3D, walk mode and capture/export.
+- **People, material and stocks:** about 200 workers in 3D with a first-person worker view, tugger trains, forklifts, trucks and section transporters, and line-side kanban stocks with alerts.
+- **Ramp-up study** (cheapest lever set per target rate), energy and CO2e per aircraft, and a KPI snapshot export (CSV).
+
 ## How it is built
 A single self-contained `index.html`: a discrete-event simulation, CPM and the assistant's rules run in the browser. No build step and no backend; three.js is loaded from a CDN.
 
