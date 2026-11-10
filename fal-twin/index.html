@@ -894,6 +894,14 @@ canvas.capfit{object-fit:contain;background:#000}
 
 <style>
 /* ==== V18 · ramp-up study, energy & carbon ==== */
+.gsub{margin:0;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.gnote{margin:0;font-size:10px;color:var(--muted);line-height:1.4}
+.gpil{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gp{border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:5px;background:var(--panel-solid);padding:8px 10px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.gp b{font:600 10px var(--f-mono);letter-spacing:.12em;text-transform:uppercase}
+.gp p{margin:0;font-size:12px;line-height:1.45;color:var(--ink);flex:1}
+.gp .linkbtn{align-self:flex-start;padding:5px 9px;font-size:11.5px}
+@media (max-width:900px){ .gpil{grid-template-columns:1fr} }
 .rgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .rgrid .kc{gap:6px}
 .rgrid .kc .kt{white-space:normal;line-height:1.4}
@@ -937,12 +945,15 @@ canvas.capfit{object-fit:contain;background:#000}
     <section class="pn s12 goal" id="pGoal" aria-label="Goal and key results">
       <div class="gl">
         <div class="ph2"><h2>Goal</h2><span class="pm">why this twin exists</span></div>
-        <p class="gtxt">Make A320 final assembly <b>more efficient</b>: reach takt at <b id="gRate">10.5</b> aircraft per month, deliver every aircraft within its <b>committed lead time</b>, and remove rework and travelled work at the source. The twin shows where time is lost and tests each fix before it reaches the shop floor.</p>
+        <p class="gtxt">Achieve a production rate of <b>100 aircraft per month</b> by optimizing end-to-end manufacturing operations, identifying the <b>critical path</b>, eliminating <b>non-value-added activities</b>, and implementing <b>Lean Manufacturing</b> principles, including Kanban, Just-in-Time (JIT), and Just-in-Sequence (JIS), across all assembly stages.</p>
+        <p class="gsub">Leverage Edge AI, Digital Twins, Industrial Metaverse, and Cloud technologies to enable real-time monitoring, predictive analysis, and early detection of supply chain, quality, and production disruptions. Provide stakeholders with actionable insights and timely alerts to accelerate decision-making, minimize downtime, reduce scrap and rework, and improve overall production efficiency.</p>
+        <p class="gnote mono">100/mo is the programme rate across all lines; this modelled line's share is <span id="gRate">10.5</span>/mo at the selected takt.</p>
         <div class="gscore"><span class="px" id="gPx" aria-hidden="true"></span><div><b id="gOn">–</b><small id="gOnS">KPIs on target</small></div></div>
       </div>
       <div class="gk">
         <div class="ph2"><h2>Key results · now vs target</h2><span class="pm">live · targets illustrative</span></div>
         <div class="kgrid" id="kGrid"></div>
+        <div class="gpil"><div class="gp"><b>Industrial metaverse</b><p>Enable immersive 3D visualization and cross-functional collaboration to evaluate production processes, test improvements, and accelerate decision-making.</p><button class="linkbtn" data-pil="meta">Open the metaverse view ↓</button></div><div class="gp"><b>Digital twin view</b><p>Simulate production scenarios to anticipate disruptions, eliminate waiting times, and optimize throughput. Evaluate the impact of proposed changes on lead time, quality, and resource utilization before physical implementation.</p><button class="linkbtn" data-pil="twin">Open the digital twin view ↓</button></div><div class="gp"><b>Edge AI</b><p>Leverage real-time sensor data and on-site AI processing to detect anomalies, identify bottlenecks, prevent defects, and reduce scrap, improving Right First Time (RFT) performance and overall production efficiency.</p><button class="linkbtn" data-pil="edge">Show edge AI at S41 ↓</button></div></div>
       </div>
     </section>
     <section class="pn s12" id="pTrace" aria-label="Line trace">
@@ -5604,6 +5615,10 @@ function specStock(k){ const d=STOCK_DEF.find(x=>x.k===k), st=STATIONS[d.st];
 { const _rp=renderPower; renderPower=function(){ _rp(); stockTick(); stockVisuals(); renderStocks(); renderTransport(); renderPeople(); if(V19.view) crewTxt(); }; }
 { const b=document.createElement('button'); b.id='navCrew'; b.innerHTML=icon('<circle cx="12" cy="7" r="3"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/>')+'Worker view'; $('#navFit').before(b); b.onclick=()=>V19.view?crewExit():crewEnter(SITE?siteCrew:lineCrew); }
 
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-pil]'); if(!b) return; const k=b.dataset.pil;
+  if(k==='meta') $('#lay2').click(); else if(k==='twin') $('#lay1').click();
+  else { if(!LIVE.lev.ai){ LIVE.lev.ai=true; onConfigChange('Edge-AI hole inspection at S41: on.'); } go(stepIdx('s41')); }
+  jumpTo('pStage'); });
 requestAnimationFrame(frame);
 })();
 </script>
