@@ -29,7 +29,11 @@ All figures are **simulated sample data**. The assistant answers are rule-based 
 
 ## Join cell twin
 
-The **Join cell 07** section embeds the robot-cell digital twin from [ai-risk-benchmark/fuselage-join-twin](https://github.com/mfmadinaveitia1-del/ai-risk-benchmark/tree/main/fuselage-join-twin): six riveting robots, a vision gantry, two AGVs and 11 agents on the section 15/21 join. A copy lives in `join-cell/index.html`; opened with `?embed=1` it shows only the cell, the inspector and the agent list, and the dashboard sizes the frame to it. Open `join-cell/` on its own for the full twin with KRIs, CTQ capability and the event trace.
+The **Join cell 07** section shows the robot-cell digital twin from [ai-risk-benchmark/fuselage-join-twin](https://github.com/mfmadinaveitia1-del/ai-risk-benchmark/tree/main/fuselage-join-twin): six riveting robots, a vision gantry, two AGVs and 11 agents on the section 15/21 join.
+
+The twin is a real-time 3D scene (WebGL, three.js r170 bundled inline, MIT licence): the cell stands inside an assembly hall with animated operators, material in process (waiting sections, stringer and frame racks, skin-panel carts, fastener kanban) and factory details (crane, floor markings, fence, andon board). It has four camera views, drag-to-orbit, Ctrl + scroll zoom and a High / Fast quality switch. Everything is procedural; there are no external models or photos.
+
+`join-cell/index.html` is the full twin with KRIs, CTQ capability and the event trace. The dashboard `index.html` carries its own inline copy of that page (the `#twinSrc` block), loads it into the frame when the section scrolls into view, and opens it full size from "Open full twin". **If you change `join-cell/index.html`, refresh the inline copy in `index.html` too.**
 
 ## Wall-display mode
 
