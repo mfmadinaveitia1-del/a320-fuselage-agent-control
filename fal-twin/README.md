@@ -23,6 +23,7 @@ Leverage Edge AI, Digital Twins, Industrial Metaverse, and Cloud technologies to
 - **Site view** of the whole plant with open process halls, weather, time of day and a guided tour.
 - **Daylight rendering:** sky-lit line view with clouds, water, contact shadows and customer liveries; cinematic 3D, walk mode and capture/export.
 - **People, material and stocks:** about 200 workers in 3D with a first-person worker view, tugger trains, forklifts, trucks and section transporters, and line-side kanban stocks with alerts.
+- **Shop-floor detail:** articulated workers, material in process at every station, kanban shelving and pallet racking, a fenced join cell with operator consoles, live andon boards, and close-up camera shots.
 - **Ramp-up study** (cheapest lever set per target rate), energy and CO2e per aircraft, and a KPI snapshot export (CSV).
 
 ## How it is built
